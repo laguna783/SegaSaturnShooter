@@ -1,0 +1,13 @@
+
+
+
+
+
+Ship Size is 
+38 (Height)
+40 (Width) 
+
+
+Change SHIP to COOLSHIP IN ALL CODE REFERENCES 
+CHANGE TILE COUNT TO 1 
+
