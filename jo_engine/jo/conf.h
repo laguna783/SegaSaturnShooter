@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@
 
   makefile sample:
 
+    JO_COMPILE_WITH_FAST_BUT_LESS_ACCURATE_MATH = 1
     JO_COMPILE_WITH_VIDEO_MODULE = 0
     JO_COMPILE_WITH_BACKUP_MODULE = 1
     JO_COMPILE_WITH_TGA_MODULE = 1
@@ -59,6 +60,7 @@
     JO_COMPILE_WITH_RAM_CARD_MODULE = 1
     JO_COMPILE_WITH_STORYBOARD_MODULE = 1
     JO_COMPILE_WITH_SPRITE_HASHTABLE = 0
+    JO_COMPILE_WITH_SOFTWARE_RENDERER_MODULE = 1
     JO_GLOBAL_MEMORY_SIZE_FOR_MALLOC = 524288
     JO_PSEUDO_SATURN_KAI_SUPPORT = 1
     JO_MAX_FS_BACKGROUND_JOBS = 4
@@ -78,7 +80,7 @@
 */
 
 # if defined(JO_NTSC_VERSION)
-    # if defined(JO_480p)
+    # if defined(JO_480i)
         /** @brief Sega Saturn NTSC Screen resolution (internal use) */
         # define JO_TV_RES							(TV_704x480)
         /** @brief NTSC Screen width */
@@ -110,24 +112,40 @@
         # define JO_TV_HEIGHT_4						(60)
     #endif
 #else /* PAL Version */
-    /** @brief Sega Saturn PAL Screen resolution (internal use) */
-    # define JO_TV_RES							(TV_320x256)
-    /** @brief PAL Screen width */
-    # define JO_TV_WIDTH						(320)
-    /** @brief PAL Screen width divided by 2 (math optimization purpose) */
-    # define JO_TV_WIDTH_2						(160)
-    /** @brief PAL Screen width divided by 4 (math optimization purpose) */
-    # define JO_TV_WIDTH_4						(80)
-    /** @brief PAL Screen height */
-    # define JO_TV_HEIGHT						(256)
-    /** @brief PAL Screen height divided by 2 (math optimization purpose) */
-    # define JO_TV_HEIGHT_2						(128)
-    /** @brief PAL Screen height divided by 4 (math optimization purpose) */
-    # define JO_TV_HEIGHT_4						(64)
-
+    # if defined(JO_480i)
+        /** @brief Sega Saturn PAL Screen resolution (internal use) */
+        # define JO_TV_RES							(TV_704x256)
+        /** @brief PAL Screen width */
+        # define JO_TV_WIDTH						(704)
+        /** @brief PAL Screen width divided by 2 (math optimization purpose) */
+        # define JO_TV_WIDTH_2						(352)
+        /** @brief PAL Screen width divided by 4 (math optimization purpose) */
+        # define JO_TV_WIDTH_4						(176)
+        /** @brief PAL Screen height */
+        # define JO_TV_HEIGHT						(256)
+        /** @brief PAL Screen height divided by 2 (math optimization purpose) */
+        # define JO_TV_HEIGHT_2						(128)
+        /** @brief PAL Screen height divided by 4 (math optimization purpose) */
+        # define JO_TV_HEIGHT_4						(64)
+    #else
+        /** @brief Sega Saturn PAL Screen resolution (internal use) */
+        # define JO_TV_RES							(TV_320x256)
+        /** @brief PAL Screen width */
+        # define JO_TV_WIDTH						(320)
+        /** @brief PAL Screen width divided by 2 (math optimization purpose) */
+        # define JO_TV_WIDTH_2						(160)
+        /** @brief PAL Screen width divided by 4 (math optimization purpose) */
+        # define JO_TV_WIDTH_4						(80)
+        /** @brief PAL Screen height */
+        # define JO_TV_HEIGHT						(256)
+        /** @brief PAL Screen height divided by 2 (math optimization purpose) */
+        # define JO_TV_HEIGHT_2						(128)
+        /** @brief PAL Screen height divided by 4 (math optimization purpose) */
+        # define JO_TV_HEIGHT_4						(64)
+    #endif
 #endif
 
-# if defined (JO_480p)
+# if defined (JO_480i)
     /** @brief VDP2 Background bitmap size */
     # define JO_VDP2_SIZE                       (BM_1024x512)
     /** @brief VDP2 Background bitmap width */
@@ -149,9 +167,6 @@
 # define JO_MAX_FILENAME_LENGTH             (13)
 /** @brief Max file available in the entire file system (on the CD of course) */
 # define JO_FS_MAX_FILES					(256)
-
-/** @brief force inline attribute (and prevent Doxygen prototype parsing bug) */
-# define __jo_force_inline                  __attribute__((always_inline)) inline
 
 #if JO_FRAMERATE < 1
 # error "JO_FRAMERATE must be greater than zero"

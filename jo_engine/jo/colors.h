@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -90,6 +90,10 @@
 # define JO_COLOR_SATURN(C)         (JO_DIV_BY_8(C) & 0x1f)
 /** @brief Internal, you should not use this macro. */
 # define JO_COLOR_SATURN_RGB(R,G,B)	((jo_color)(0x8000 | ((B) << 10) | ((G) << 5) | (R)))
+/** @brief Internal, you should not use this macro. */
+# define JO_COLOR_SATURN_GET_R(C)   ((C) & 0x1f)
+# define JO_COLOR_SATURN_GET_G(C)   (((C) >> 5) & 0x1f)
+# define JO_COLOR_SATURN_GET_B(C)   (((C) >> 10) & 0x1f)
 
 /** @brief Get jo_color type from RGB additive color model
  *  @param R Red [0, 255]
@@ -98,6 +102,8 @@
  *  @return jo_color
 */
 # define JO_COLOR_RGB(R,G,B)	    JO_COLOR_SATURN_RGB(JO_COLOR_SATURN(R), JO_COLOR_SATURN(G), JO_COLOR_SATURN(B))
+
+#if JO_COMPILE_USING_SGL
 
 /** @brief Set color filter A for scroll screen
  *  @param screens Scroll screens (You can pass multiple value using pipe(|). Example: JO_SPRITE_SCREEN|JO_NBG0_SCREEN)
@@ -137,6 +143,8 @@ static  __jo_force_inline void      jo_disable_all_screen_color_filter(void)
 {
     jo_disable_screen_color_filter(JO_ALL_SCROLL_SCREEN);
 }
+
+#endif
 
 #endif /* !__JO_COLORS_H__ */
 

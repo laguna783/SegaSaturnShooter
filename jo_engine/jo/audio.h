@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,9 @@ typedef struct
     unsigned int    data_length;
     jo_sound_mode   mode;
     unsigned char   current_playing_channel;
+    unsigned short  sample_rate; // Set sampling rate from 8000 to 44100 kHz
+    unsigned char   volume; // Change volume: 0 (JO_MIN_AUDIO_VOLUME) -> 127 (JO_MAX_AUDIO_VOLUME)
+    char            pan; // Adjust stereo: -128 (left speaker) -> 127 (right speaker)
 }                   jo_sound;
 
 /** @brief Default audio volume */

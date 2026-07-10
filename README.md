@@ -1,15 +1,12 @@
-Sega Saturn 2D Shooter Project.
+# Bullet Symphony No.1
 
-About Jo-Engine
-Engine is an open source 2D and 3D game engine for the Sega Saturn written in C under MIT license by Joannes Fetz.
-It allows to develop game easily without extensive knowledge in embedded development.
-And... games run on emulator and also on the original system !
+Bullet Symphony No.1 is a retro 2D shooter for the Sega Saturn, built with
+[Jo-Engine](https://jo-engine.org/). The project currently uses Jo-Engine
+v2025.1, the latest stable release.
 
-Jo-Engine Website: https://jo-engine.org/
+The game began with Jo-Engine's 2D shooter demo and is being developed into an
+original Sega Saturn title by Giancarlos Alvarado / Wiz Arts Digital.
 
-The Jo-Engine's 2D Shooter Demo is being used as the foundation for a new Retro 2D Shooter Project for the Sega Saturn. 
-This is very much an on-going project. 
+The game project is located in `Projects/BulletSymphonyNo1`.
 
-Wiz Arts Digital Website: https://www.wizartsdigital.com
-
-Wikipedia: https://en.wikipedia.org/wiki/Homebrew_(video_games)#Sega_Saturn
+Wiz Arts Digital: https://www.wizartsdigital.com

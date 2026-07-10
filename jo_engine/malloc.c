@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -57,10 +57,17 @@ typedef struct
     unsigned char       *end;
 }                       jo_memory_zone;
 
-static jo_memory_zone   memory_zones[9/*MAIN RAM + 32MB RAM Extension*/];
+static jo_memory_zone   memory_zones[JO_MALLOC_MAX_MEMORY_ZONE];
 
 void                    jo_add_memory_zone(unsigned char *ptr, const unsigned int size_in_bytes)
 {
+#ifdef JO_DEBUG
+    if (__jo_memory_zone_index >= (JO_MALLOC_MAX_MEMORY_ZONE - 1))
+    {
+        jo_core_error("Too many memory zone");
+        return ;
+    }
+#endif
     memory_zones[__jo_memory_zone_index].begin = ptr;
     memory_zones[__jo_memory_zone_index].high = ptr;
     memory_zones[__jo_memory_zone_index].end = ptr + size_in_bytes;
@@ -135,7 +142,32 @@ malloc_new_block:
     return (block + 1);
 }
 
-inline void                    jo_free(const void * const p)
+void                            jo_reduce_memory_fragmentation(void)
+{
+    register int                zone;
+    unsigned char               *ptr;
+    jo_memory_block             *block;
+    jo_memory_block             *last_free_block;
+
+    for (JO_ZERO(zone); zone < __jo_memory_zone_index; ++zone)
+    {
+        ptr = memory_zones[zone].begin;
+        last_free_block = JO_NULL;
+        while (ptr < memory_zones[zone].high)
+        {
+            block = (jo_memory_block *)ptr;
+            if (block->zone != JO_BLOCK_FREE)
+                last_free_block = JO_NULL;
+            if (block->zone == JO_BLOCK_FREE && last_free_block == JO_NULL)
+                last_free_block = block;
+            ptr += block->size;
+        }
+        if (last_free_block != JO_NULL)
+            memory_zones[zone].high = (unsigned char *)last_free_block;
+    }
+}
+
+inline void                     jo_free(const void * const p)
 {
     jo_memory_block             *block;
 

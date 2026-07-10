@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -40,9 +40,10 @@
 #include "jo/malloc.h"
 #include "jo/fs.h"
 #include "jo/image.h"
+#include "jo/math.h"
+#include "jo/colors.h"
 #include "jo/sprites.h"
 #include "jo/vdp2.h"
-#include "jo/math.h"
 #include "jo/palette.h"
 #include "jo/vdp2_malloc.h"
 
@@ -62,12 +63,12 @@ static jo_color                 *__jo_cram = ((jo_color *)JO_VDP2_CRAM) + CRAM_P
 static unsigned char            *__jo_a0 = (unsigned char *)VDP2_VRAM_A0;
 static jo_vdp2_memory_segment   __jo_a0_segments[6];
 // A1
-# define KTABLE_SIZE                    (0x1FE00)
+# define KTABLE_SIZE            (0x1FE00)
 static const unsigned char      *__jo_rbg0_k_table = (unsigned char *)VDP2_VRAM_A1;
-# define ROTATION_TABLE_SIZE            (0x00080)
+# define ROTATION_TABLE_SIZE    (0x00080)
 static const unsigned char      *__jo_rbg0_r_table = (unsigned char *)(VDP2_VRAM_A1 + KTABLE_SIZE);
-//# define REMAING_SPACE_IN_A1            (0x1FC)
-//static unsigned char            *__jo_remaing_spaceA1 = (unsigned char *)(VDP2_VRAM_A1 + KTABLE_SIZE + ROTATION_TABLE_SIZE);
+//# define REMAING_SPACE_IN_A1  (0x1FC)
+//static unsigned char          *__jo_remaing_spaceA1 = (unsigned char *)(VDP2_VRAM_A1 + KTABLE_SIZE + ROTATION_TABLE_SIZE);
 static const unsigned char      *__jo_back_color = (unsigned char *)(VDP2_VRAM_A1 + 0x1fffe); // The two last bytes in A1 Bank is for background color
 // B0
 # define B0_SEGMENT_COUNT       (6)
@@ -130,7 +131,7 @@ inline void                     jo_vdp2_free(const void * const p)
     }
 }
 
-void                            *jo_vdp2_malloc(const jo_vdp2_ram_usage usage, const unsigned int n)
+void                            *jo_vdp2_malloc(const jo_vdp2_ram_usage usage, unsigned int n)
 {
     register unsigned int       i;
     void                        *ptr;
@@ -149,6 +150,7 @@ void                            *jo_vdp2_malloc(const jo_vdp2_ram_usage usage, c
         case JO_VDP2_RAM_CELL_NBG0:
         case JO_VDP2_RAM_CELL_NBG2:
         case JO_VDP2_RAM_CELL_NBG3:
+        case JO_VDP2_LINE_COLOR_TABLE:
             for (JO_ZERO(i); i < B1_SEGMENT_COUNT; ++i)
             {
                 if (__jo_b1_segments[i].size == 0)

@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -75,6 +75,8 @@
 #include "effects.h"
 #include "font.h"
 #include "storyboard.h"
+#include "software_renderer.h"
+#include "voxel.h"
 
 #endif /* !__JO_H__ */
 

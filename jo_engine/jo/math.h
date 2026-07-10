@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -107,6 +107,12 @@
  */
 # define JO_MULT_BY_256(X)			((X) << 8)
 
+/** @brief Multiply a variable by 512
+ *  @remarks faster than X * 512
+ *  @param X Variable name
+ */
+# define JO_MULT_BY_512(X)			((X) << 9)
+
 /** @brief Multiply a variable by 1024
  *  @remarks faster than X * 1024
  *  @param X Variable name
@@ -173,6 +179,24 @@
  */
 # define JO_DIV_BY_64(X)			((X) >> 6)
 
+/** @brief Devide a variable by 128
+ *  @remarks faster than X / 128
+ *  @param X Variable name
+ */
+# define JO_DIV_BY_128(X)			((X) >> 7)
+
+/** @brief Devide a variable by 256
+ *  @remarks faster than X / 256
+ *  @param X Variable name
+ */
+# define JO_DIV_BY_256(X)			((X) >> 8)
+
+/** @brief Devide a variable by 512
+ *  @remarks faster than X / 512
+ *  @param X Variable name
+ */
+# define JO_DIV_BY_512(X)			((X) >> 9)
+
 /** @brief Devide a variable by 1024
  *  @remarks faster than X / 1024
  *  @param X Variable name
@@ -218,6 +242,11 @@
  *  @param M Modulo
  */
 # define JO_MOD_POW2(N, M)          ((N) & ((M) - 1))
+
+/** @brief Fast check if N of a power of 2
+ *  @param N Number
+ */
+# define JO_IS_POW2(N)              ((N) != 0 && (((N) & ((N) - 1)) == 0))
 
 /** @brief Get the absolute value of X
  *  @param X Variable name
@@ -355,26 +384,32 @@
 
 /** @brief Fixed floating point value for 0 */
 # define JO_FIXED_0					(0)
+/** @brief Fixed floating point value for 0.5 */
+# define JO_FIXED_1_DIV_2           (32768)
+/** @brief Fixed floating point value for 0.999 */
+# define JO_FIXED_ALMOST_1          (65470)
 /** @brief Fixed floating point value for 1 */
 # define JO_FIXED_1					(65536)
 /** @brief Fixed floating point value for 2 */
-# define JO_FIXED_2                 (‭131072‬)
+# define JO_FIXED_2                 JO_INT_TO_FIXED(2)
+/** @brief Fixed floating point value for 3 */
+# define JO_FIXED_3                 JO_INT_TO_FIXED(3)
 /** @brief Fixed floating point value for 4 */
-# define JO_FIXED_4                 (‭262144‬)
+# define JO_FIXED_4                 JO_INT_TO_FIXED(4)
 /** @brief Fixed floating point value for 8 */
-# define JO_FIXED_8                 (‭524288‬)
+# define JO_FIXED_8                 JO_INT_TO_FIXED(8)
 /** @brief Fixed floating point value for 16 */
-# define JO_FIXED_16                (‭1048576‬)
+# define JO_FIXED_16                JO_INT_TO_FIXED(16)
 /** @brief Fixed floating point value for 32 */
-# define JO_FIXED_32                (2097152)
+# define JO_FIXED_32                JO_INT_TO_FIXED(32)
 /** @brief Fixed floating point value for 120 */
-# define JO_FIXED_120				(7864320)
+# define JO_FIXED_120				JO_INT_TO_FIXED(120)
 /** @brief Fixed floating point value for 150 */
-# define JO_FIXED_150				(9830400)
+# define JO_FIXED_150				JO_INT_TO_FIXED(150)
 /** @brief Fixed floating point value for 180 */
-# define JO_FIXED_180				(11796480)
+# define JO_FIXED_180				JO_INT_TO_FIXED(180)
 /** @brief Fixed floating point value for 360 */
-# define JO_FIXED_360				(23592960)
+# define JO_FIXED_360				JO_INT_TO_FIXED(360)
 
 /** @brief Fixed floating point value for -32767.99998 */
 # define JO_FIXED_MIN				(-2147483647)
@@ -394,9 +429,21 @@
 # define JO_FIXED_PI_DIV_180        (1144)
 /** @brief Fixed value of PI/2 */
 # define JO_FIXED_PI_DIV_2          (102944)
+/** @brief Fixed value of PI/2 */
+# define JO_FIXED_PI_OVER_2         JO_FIXED_PI_DIV_2
+/** @brief Fixed value of 3 PI / 2 */
+# define JO_FIXED_3_PI_OVER_2       (308331)
 /** @brief Fixed value of 1/65536 */
 # define JO_FIXED_1_DIV             (1.0f / 65536.0f)
 
+/** @brief Convert int to jo_fixed
+ *  @param X operand
+ */
+# define JO_INT_TO_FIXED(X)         JO_MULT_BY_65536(X)
+/** @brief Convert jo_fixed to int
+ *  @param X operand
+ */
+# define JO_FIXED_TO_INT(X)         JO_DIV_BY_65536(X)
 
 /** @brief Convert int to jo engine fixed
  *  @param x Float to convert
@@ -404,7 +451,7 @@
  */
 static __jo_force_inline jo_fixed       jo_int2fixed(const int x)
 {
-    return JO_MULT_BY_65536(x);
+    return JO_INT_TO_FIXED(x);
 }
 
 /** @brief Convert jo engine fixed to int
@@ -413,7 +460,7 @@ static __jo_force_inline jo_fixed       jo_int2fixed(const int x)
  */
 static __jo_force_inline int            jo_fixed2int(const jo_fixed x)
 {
-    return JO_DIV_BY_65536(x);
+    return JO_FIXED_TO_INT(x);
 }
 
 /** @brief Convert float to jo engine fixed (avoid usage of GCC Soft Float)
@@ -452,9 +499,16 @@ static __jo_force_inline jo_fixed       jo_fixed_wrap_to_pi(jo_fixed rad)
 static __jo_force_inline jo_fixed       jo_fixed_wrap_to_180(jo_fixed deg)
 {
     while (deg > JO_FIXED_180) deg -= JO_FIXED_360;
-    while (deg <= -JO_FIXED_PI) deg += JO_FIXED_360;
+    while (deg <= -JO_FIXED_180) deg += JO_FIXED_360;
     return (deg);
 }
+
+/** @brief x raised to the power of the integer part of y
+ *  @param x First operand
+ *  @param y Second operand
+ *  @return x^y
+ */
+jo_fixed                                jo_fixed_pow(jo_fixed x, jo_fixed y);
 
 /** @brief Multiply to fixed number
  *  @param x First operand
@@ -497,6 +551,24 @@ static __jo_force_inline jo_fixed       jo_fixed_rad2deg(const jo_fixed rad)
     return (jo_fixed_mult(jo_fixed_wrap_to_pi(rad), JO_FIXED_180_DIV_PI));
 }
 
+/** @brief Returns the smallest (fixed) integer value greater than or equal to x
+ *  @param x Fixed value
+ *  @return Smallest (fixed) integer value greater than or equal to x
+ */
+static __jo_force_inline jo_fixed       jo_fixed_ceil(const jo_fixed x)
+{
+    return (x & 0xFFFF0000UL) + (x & 0x0000FFFFUL ? JO_FIXED_1 : 0);
+}
+
+/** @brief Returns the largest (fixed) integer value less than or equal to x
+ *  @param x Fixed value
+ *  @return largest (fixed) integer value less than or equal to x
+ */
+static __jo_force_inline jo_fixed       jo_fixed_floor(const jo_fixed x)
+{
+    return (x & 0xFFFF0000ul);
+}
+
 /*
 ██████╗  █████╗ ███╗   ██╗██████╗  ██████╗ ███╗   ███╗
 ██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔═══██╗████╗ ████║
@@ -504,7 +576,6 @@ static __jo_force_inline jo_fixed       jo_fixed_rad2deg(const jo_fixed rad)
 ██╔══██╗██╔══██║██║╚██╗██║██║  ██║██║   ██║██║╚██╔╝██║
 ██║  ██║██║  ██║██║ ╚████║██████╔╝╚██████╔╝██║ ╚═╝ ██║
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝ ╚═╝     ╚═╝
-
 */
 
 /** @brief Get or set current random seed
@@ -534,8 +605,13 @@ static  __jo_force_inline int	jo_random_using_multiple(int max, int multiple)
 ╚════██║██║▄▄ ██║██╔══██╗   ██║
 ███████║╚██████╔╝██║  ██║   ██║
 ╚══════╝ ╚══▀▀═╝ ╚═╝  ╚═╝   ╚═╝
-
 */
+
+/** @brief Fast Square root using fixed number
+ *  @param value Value
+ *  @return Sqrt(value)
+ */
+jo_fixed                        jo_fixed_sqrt(jo_fixed value);
 
 /** @brief Fast square root
  *  @param value Value
@@ -557,6 +633,28 @@ static  __jo_force_inline float jo_sqrtf(float value)
 }
 
 /*
+██╗███╗   ██╗██╗   ██╗███████╗██████╗ ███████╗███████╗    ███████╗ ██████╗ ██████╗ ████████╗
+██║████╗  ██║██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝    ██╔════╝██╔═══██╗██╔══██╗╚══██╔══╝
+██║██╔██╗ ██║██║   ██║█████╗  ██████╔╝███████╗█████╗      ███████╗██║   ██║██████╔╝   ██║
+██║██║╚██╗██║╚██╗ ██╔╝██╔══╝  ██╔══██╗╚════██║██╔══╝      ╚════██║██║▄▄ ██║██╔══██╗   ██║
+██║██║ ╚████║ ╚████╔╝ ███████╗██║  ██║███████║███████╗    ███████║╚██████╔╝██║  ██║   ██║
+╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝    ╚══════╝ ╚══▀▀═╝ ╚═╝  ╚═╝   ╚═╝
+AKA RECIPROCAL SQUARE ROOT
+*/
+
+/** @brief Fast Reciprocal Square root using fixed number
+ *  @param value Value
+ *  @return RSqrt(value)
+ */
+jo_fixed        jo_fixed_rsqrt(jo_fixed value);
+
+/** @brief Fast Reciprocal Square root using floating number
+ *  @param value Value
+ *  @return RSqrt(value)
+ */
+float           jo_rsqrt(float value);
+
+/*
 ███████╗ ██████╗ ██╗         ██╗███╗   ██╗████████╗███████╗██████╗  ██████╗ ██████╗
 ██╔════╝██╔════╝ ██║         ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔═══██╗██╔══██╗
 ███████╗██║  ███╗██║         ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝██║   ██║██████╔╝
@@ -565,6 +663,37 @@ static  __jo_force_inline float jo_sqrtf(float value)
 ╚══════╝ ╚═════╝ ╚══════╝    ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝
 
 */
+
+/** @brief See https://github.com/johannes-fetz/joengine/issues/42 */
+# define __JO_DEG_TO_ANGLE_MAGIC    (182)
+
+/** @brief Replacement for DEGtoANG using floating number
+ *  @param deg Degree
+ *  @return SGL ANGLE
+ */
+static  __jo_force_inline ANGLE     jo_DEGtoANG(const float deg)
+{
+#ifdef JO_COMPILE_WITH_FAST_BUT_LESS_ACCURATE_MATH
+    return ((ANGLE)(__JO_DEG_TO_ANGLE_MAGIC * (deg)));
+#else
+    return ((ANGLE)((65536.0 * (deg)) / 360.0));
+#endif
+}
+
+/** @brief Replacement for DEGtoANG using interger
+ *  @param deg Degree
+ *  @return SGL ANGLE
+ */
+static  __jo_force_inline ANGLE     jo_DEGtoANG_int(const int deg)
+{
+#ifdef JO_COMPILE_WITH_FAST_BUT_LESS_ACCURATE_MATH
+    return ((ANGLE)(__JO_DEG_TO_ANGLE_MAGIC * (deg)));
+#else
+    return ((ANGLE)(JO_MULT_BY_65536(deg) / 360.0));
+#endif
+}
+
+#if JO_COMPILE_USING_SGL
 
 /** @brief Convert fixed radian to SGL ANGLE
  *  @param rad Jo Engine fixed radian
@@ -575,13 +704,15 @@ static  __jo_force_inline ANGLE     jo_fixed_rad2ANGLE(const jo_fixed rad)
     return (RADtoANG(jo_fixed2float(rad)));
 }
 
+#endif
+
 /** @brief Convert fixed degree to SGL ANGLE
  *  @param deg Jo Engine fixed degree
  *  @return SGL ANGLE
  */
 static  __jo_force_inline ANGLE     jo_fixed_deg2ANGLE(const jo_fixed deg)
 {
-    return (DEGtoANG(jo_fixed2float(deg)));
+    return (jo_DEGtoANG(jo_fixed2float(deg)));
 }
 
 /*
@@ -591,7 +722,6 @@ static  __jo_force_inline ANGLE     jo_fixed_deg2ANGLE(const jo_fixed deg)
 ╚════██║██║██║╚██╗██║██║   ██║╚════██║
 ███████║██║██║ ╚████║╚██████╔╝███████║
 ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
-
 */
 
 /** @brief Fast sinus computation using fixed number
@@ -673,10 +803,7 @@ static  __jo_force_inline float	jo_sinf_mult(const float value, const int deg)
  *  @param rad Fixed angle in radian
  *  @return Cos(rad)
  */
-static  __jo_force_inline jo_fixed jo_fixed_cos(jo_fixed rad)
-{
-    return (jo_fixed_sin(rad + JO_FIXED_PI_DIV_2));
-}
+jo_fixed                            jo_fixed_cos(jo_fixed rad);
 
 /** @brief Fast cosinus computation
  *  @param deg Angle in degree
@@ -690,7 +817,7 @@ static  __jo_force_inline jo_fixed	jo_cos(const int deg)
 /** @brief Cosinus computation
  *  @param deg Angle in degree
  *  @return Cos(deg) using floating number (slow)
- *  @warning slower than jo_sin() because it use floating point
+ *  @warning slower than jo_cos() because it use floating point
  */
 static  __jo_force_inline float	jo_cosf(const int deg)
 {
@@ -700,7 +827,7 @@ static  __jo_force_inline float	jo_cosf(const int deg)
 /** @brief Cosinus computation
  *  @param rad Angle in radian
  *  @return Fixed Cos(rad)
- *  @warning slower than jo_sin() because it use floating point
+ *  @warning slower than jo_cos() because it use floating point
  */
 static  __jo_force_inline jo_fixed	jo_cos_rad(const float rad)
 {
@@ -710,7 +837,7 @@ static  __jo_force_inline jo_fixed	jo_cos_rad(const float rad)
 /** @brief Cosinus computation
  *  @param rad Angle in radian
  *  @return Cos(rad) using floating number (slow)
- *  @warning slower than jo_sin_rad() because it use floating point
+ *  @warning slower than jo_cos_rad() because it use floating point
  */
 static  __jo_force_inline float	jo_cos_radf(const float rad)
 {
@@ -753,7 +880,7 @@ static  __jo_force_inline float	jo_cosf_mult(const float value, const int deg)
  */
 static __jo_force_inline jo_fixed    jo_tan(const int deg)
 {
-    return (jo_sin(deg) / jo_cos(deg));
+    return jo_fixed_div(jo_sin(deg), jo_cos(deg));
 }
 
 /** @brief Tangent computation
@@ -773,7 +900,7 @@ static __jo_force_inline float    jo_tanf(const float deg)
  */
 static __jo_force_inline jo_fixed    jo_tan_rad(const float rad)
 {
-    return (jo_sin_rad(rad) / jo_cos_rad(rad));
+    return jo_fixed_div(jo_sin_rad(rad), jo_cos_rad(rad));
 }
 
 /** @brief Tangent computation
@@ -840,8 +967,135 @@ static __jo_force_inline int    jo_atan2f(const float y, const float x)
 ╚██╗ ██╔╝██╔══╝  ██║        ██║   ██║   ██║██╔══██╗
  ╚████╔╝ ███████╗╚██████╗   ██║   ╚██████╔╝██║  ██║
   ╚═══╝  ╚══════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
+*/
+
+/*
+    _______               __   _   __                __
+   / ____(_)  _____  ____/ /  / | / /_  ______ ___  / /_  ___  _____
+  / /_  / / |/_/ _ \/ __  /  /  |/ / / / / __ `__ \/ __ \/ _ \/ ___/
+ / __/ / />  </  __/ /_/ /  / /|  / /_/ / / / / / / /_/ /  __/ /
+/_/   /_/_/|_|\___/\__,_/  /_/ |_/\__,_/_/ /_/ /_/_.___/\___/_/
 
 */
+
+/** @brief Compute cubic bezier curve point for vectors (using fixed numbers)
+ *  @param t Value of the function on the curve [0 to JO_FIXED_1]
+ *  @param p0 First vector
+ *  @param p1 Second vector
+ *  @param p2 Third vector
+ *  @param p3 Fourth vector
+ *  @param result output vector
+ */
+void    jo_vector_fixed_compute_bezier_point(const jo_fixed t, jo_vector_fixed p0, jo_vector_fixed p1, jo_vector_fixed p2, jo_vector_fixed p3, jo_vector_fixed *result);
+
+/** @brief Add 2 vectors (using fixed numbers)
+ *  @param a First vector
+ *  @param b Second vector
+ *  @param result output vector
+ *  @remarks You can pass a or b address for result parameter
+ */
+static __jo_force_inline void jo_vector_fixed_add(const jo_vector_fixed * const a, const jo_vector_fixed * const b, jo_vector_fixed * const result)
+{
+    result->x = a->x + b->x;
+    result->y = a->y + b->y;
+    result->z = a->z + b->z;
+}
+
+/** @brief Multiply value to vector (using fixed numbers)
+ *  @param a Vector
+ *  @param s Constant
+ *  @param result output vector
+ *  @remarks You can pass a address for result parameter
+ */
+static __jo_force_inline void jo_vector_fixed_muls(const jo_vector_fixed * const a, const jo_fixed s, jo_vector_fixed * const result)
+{
+    result->x = jo_fixed_mult(a->x, s);
+    result->y = jo_fixed_mult(a->y, s);
+    result->z = jo_fixed_mult(a->z, s);
+}
+
+/** @brief Add 2 vectors4 (using fixed numbers)
+ *  @param a First vector4
+ *  @param b Second vector4
+ *  @param result output vector4
+ *  @remarks You can pass a or b address for result parameter
+ */
+static __jo_force_inline void jo_vector4_fixed_add(const jo_vector4_fixed * const a, const jo_vector4_fixed * const b, jo_vector4_fixed * const result)
+{
+    result->x = a->x + b->x;
+    result->y = a->y + b->y;
+    result->z = a->z + b->z;
+    result->w = JO_FIXED_1;
+}
+
+/** @brief Substract 2 vectors4 (using fixed numbers)
+ *  @param a First vector4
+ *  @param b Second vector4
+ *  @param result output vector4
+ *  @remarks You can pass a or b address for result parameter
+ */
+static __jo_force_inline void jo_vector4_fixed_sub(const jo_vector4_fixed * const a, const jo_vector4_fixed * const b, jo_vector4_fixed * const result)
+{
+    result->x = a->x - b->x;
+    result->y = a->y - b->y;
+    result->z = a->z - b->z;
+    result->w = JO_FIXED_1;
+}
+
+/** @brief Cross product of 2 vectors4 (using fixed numbers)
+ *  @param a First vector4
+ *  @param b Second vector4
+ *  @param result output vector4
+ */
+static __jo_force_inline void jo_vector4_fixed_cross(const jo_vector4_fixed * const a, const jo_vector4_fixed * const b, jo_vector4_fixed * const result)
+{
+    result->x = jo_fixed_mult(a->y, b->z) - jo_fixed_mult(a->z, b->y);
+    result->y = jo_fixed_mult(a->z, b->x) - jo_fixed_mult(a->x, b->z);
+    result->z = jo_fixed_mult(a->x, b->y) - jo_fixed_mult(a->y, b->x);
+    result->w = JO_FIXED_1;
+}
+
+/** @brief Dot product of 2 vectors4 (using fixed numbers)
+ *  @param a First vector4
+ *  @param b Second vector4
+ *  @return Dot product
+ */
+static __jo_force_inline jo_fixed jo_vector4_fixed_dot(const jo_vector4_fixed * const a, const jo_vector4_fixed * const b)
+{
+    return (jo_fixed_mult(a->x, b->x) + jo_fixed_mult(a->y, b->y) + jo_fixed_mult(a->z, b->z));
+}
+
+/** @brief Dot product of 2 vectors4 (using fixed numbers)
+ *  @param a First vector4
+ *  @param b Second vector4
+ *  @return Dot product
+ */
+static __jo_force_inline void jo_vector4_swap(jo_vector4_fixed * const a, jo_vector4_fixed * const b)
+{
+    JO_SWAP(a->x, b->x);
+    JO_SWAP(a->y, b->y);
+    JO_SWAP(a->z, b->z);
+    JO_SWAP(a->w, b->w);
+}
+
+/*
+    ________            __  _                _   __                __
+   / ____/ /___  ____ _/ /_(_)___  ____ _   / | / /_  ______ ___  / /_  ___  _____
+  / /_  / / __ \/ __ `/ __/ / __ \/ __ `/  /  |/ / / / / __ `__ \/ __ \/ _ \/ ___/
+ / __/ / / /_/ / /_/ / /_/ / / / / /_/ /  / /|  / /_/ / / / / / / /_/ /  __/ /
+/_/   /_/\____/\__,_/\__/_/_/ /_/\__, /  /_/ |_/\__,_/_/ /_/ /_/_.___/\___/_/
+                                /____/
+*/
+
+/** @brief Compute cubic bezier curve point for vectors (using floating numbers)
+ *  @param t Value of the function on the curve [0.0f to 1.0f]
+ *  @param p0 First vector
+ *  @param p1 Second vector
+ *  @param p2 Third vector
+ *  @param p3 Fourth vector
+ *  @param result output vector
+ */
+void    jo_vectorf_compute_bezier_point(const float t, jo_vectorf p0, jo_vectorf p1, jo_vectorf p2, jo_vectorf p3, jo_vectorf *result);
 
 /** @brief Add 2 vectors (using floating numbers)
  *  @param a First vector
@@ -1031,6 +1285,21 @@ static __jo_force_inline float jo_vectorf_angle_between_radf(const jo_vectorf * 
 
 */
 
+/** @brief Creates the identity matrix (using fixed numbers)
+ *  @param result Result matrix
+ */
+static __jo_force_inline void   jo_matrix_identity(jo_matrix * const result)
+{
+    register int                i;
+
+    for (i = 1; i < 15; ++i)
+        JO_ZERO(result->table[i]);
+    result->m00 = JO_FIXED_1;
+    result->m11 = JO_FIXED_1;
+    result->m22 = JO_FIXED_1;
+    result->m33 = JO_FIXED_1;
+}
+
 /** @brief Creates the identity matrix (using floating numbers)
  *  @param result Result matrix
  */
@@ -1046,6 +1315,18 @@ static __jo_force_inline void   jo_matrixf_identity(jo_matrixf * const result)
     result->m33 = 1;
 }
 
+/** @brief Creates translation matrix (using fixed numbers)
+ *  @param offset Offset vector
+ *  @param result Result matrix
+ */
+static __jo_force_inline void jo_matrix_translation(const jo_vector_fixed * const offset, jo_matrix * const result)
+{
+    jo_matrix_identity(result);
+    result->m30 = offset->x;
+    result->m31 = offset->y;
+    result->m32 = offset->z;
+}
+
 /** @brief Creates translation matrix (using floating numbers)
  *  @param offset Offset vector
  *  @param result Result matrix
@@ -1058,6 +1339,18 @@ static __jo_force_inline void jo_matrixf_translation(const jo_vectorf * const of
     result->m32 = offset->z;
 }
 
+/** @brief Creates scaling matrix (using fixed numbers)
+ *  @param scale Scale vector
+ *  @param result Result matrix
+ */
+static __jo_force_inline void jo_matrix_scaling(const jo_vector_fixed * const scale, jo_matrix * const result)
+{
+    jo_matrix_identity(result);
+    result->m00 = scale->x;
+    result->m11 = scale->y;
+    result->m22 = scale->z;
+}
+
 /** @brief Creates scaling matrix (using floating numbers)
  *  @param scale Scale vector
  *  @param result Result matrix
@@ -1068,6 +1361,19 @@ static __jo_force_inline void jo_matrixf_scaling(const jo_vectorf * const scale,
     result->m00 = scale->x;
     result->m11 = scale->y;
     result->m22 = scale->z;
+}
+
+/** @brief Creates rotating matrix (X axis) (using fixed numbers)
+ *  @param angle_in_rad Angle in radiant
+ *  @param result Result matrix
+ */
+static __jo_force_inline void jo_matrix_rotation_x_rad(const float angle_in_rad, jo_matrix * const result)
+{
+    jo_matrix_identity(result);
+    result->m11 = jo_cos_rad(angle_in_rad);
+    result->m12 = jo_sin_rad(angle_in_rad);
+    result->m21 = -result->m12;
+    result->m22 = result->m11;
 }
 
 /** @brief Creates rotating matrix (X axis) (using floating numbers)
@@ -1083,6 +1389,19 @@ static __jo_force_inline void jo_matrixf_rotation_x_rad(const float angle_in_rad
     result->m22 = result->m11;
 }
 
+/** @brief Creates rotating matrix (Y axis) (using fixed numbers)
+ *  @param angle_in_rad Angle in radiant
+ *  @param result Result matrix
+ */
+static __jo_force_inline void jo_matrix_rotation_y_rad(const float angle_in_rad, jo_matrix * const result)
+{
+    jo_matrix_identity(result);
+    result->m00 = jo_cos_rad(angle_in_rad);
+    result->m20 = jo_sin_rad(angle_in_rad);
+    result->m02 = -result->m20;
+    result->m22 = result->m00;
+}
+
 /** @brief Creates rotating matrix (Y axis) (using floating numbers)
  *  @param angle_in_rad Angle in radiant
  *  @param result Result matrix
@@ -1096,6 +1415,19 @@ static __jo_force_inline void jo_matrixf_rotation_y_rad(const float angle_in_rad
     result->m22 = result->m00;
 }
 
+/** @brief Creates rotating matrix (Z axis) (using fixed numbers)
+ *  @param angle_in_rad Angle in radiant
+ *  @param result Result matrix
+ */
+static __jo_force_inline void jo_matrix_rotation_z_rad(const float angle_in_rad, jo_matrix * const result)
+{
+    jo_matrix_identity(result);
+    result->m00 = jo_cos_rad(angle_in_rad);
+    result->m01 = jo_sin_rad(angle_in_rad);
+    result->m10 = -result->m01;
+    result->m11 = result->m00;
+}
+
 /** @brief Creates rotating matrix (Z axis) (using floating numbers)
  *  @param angle_in_rad Angle in radiant
  *  @param result Result matrix
@@ -1107,6 +1439,31 @@ static __jo_force_inline void jo_matrixf_rotation_z_rad(const float angle_in_rad
     result->m01 = jo_sin_radf(angle_in_rad);
     result->m10 = -result->m01;
     result->m11 = result->m00;
+}
+
+/** @brief Creates transpose matrix (using fixed numbers)
+ *  @param matrix Input matrix
+ *  @param result Result matrix
+ *  @warning matrix and result parameters must not be the same address
+ */
+static __jo_force_inline void jo_matrix_transpose(const jo_matrix * const matrix, jo_matrix * const result)
+{
+    result->m00 = matrix->m00;
+    result->m10 = matrix->m01;
+    result->m20 = matrix->m02;
+    result->m30 = matrix->m03;
+    result->m01 = matrix->m10;
+    result->m11 = matrix->m11;
+    result->m21 = matrix->m12;
+    result->m31 = matrix->m13;
+    result->m02 = matrix->m20;
+    result->m12 = matrix->m21;
+    result->m22 = matrix->m22;
+    result->m32 = matrix->m23;
+    result->m03 = matrix->m30;
+    result->m13 = matrix->m31;
+    result->m23 = matrix->m32;
+    result->m33 = matrix->m33;
 }
 
 /** @brief Creates transpose matrix (using floating numbers)
@@ -1132,6 +1489,45 @@ static __jo_force_inline void jo_matrixf_transpose(const jo_matrixf * const matr
     result->m13 = matrix->m31;
     result->m23 = matrix->m32;
     result->m33 = matrix->m33;
+}
+
+/** @brief Multiply a matrix by a vector4 (using fixed numbers)
+ *  @param m Matrix
+ *  @param v Vector4
+ *  @param result Result vector4
+ *  @warning v and result parameters can be the same address
+ */
+static __jo_force_inline void   jo_matrix_mul_vector4(const jo_matrix * const m, const jo_vector4_fixed * const v, jo_vector4_fixed * const result)
+{
+    result->x = jo_fixed_mult(m->m00, v->x) + jo_fixed_mult(m->m10, v->y) + jo_fixed_mult(m->m20, v->z) + jo_fixed_mult(m->m30, v->w);
+    result->y = jo_fixed_mult(m->m01, v->x) + jo_fixed_mult(m->m11, v->y) + jo_fixed_mult(m->m21, v->z) + jo_fixed_mult(m->m31, v->w);
+    result->z = jo_fixed_mult(m->m02, v->x) + jo_fixed_mult(m->m12, v->y) + jo_fixed_mult(m->m22, v->z) + jo_fixed_mult(m->m32, v->w);
+    result->w = jo_fixed_mult(m->m03, v->x) + jo_fixed_mult(m->m13, v->y) + jo_fixed_mult(m->m23, v->z) + jo_fixed_mult(m->m33, v->w);
+}
+
+/** @brief Multiply 2 matrix (using fixed numbers)
+ *  @param a First matrix
+ *  @param b Second matrix
+ *  @param result Result matrix
+ *  @warning a, b and result parameters must not be the same address
+ */
+static __jo_force_inline void   jo_matrix_mul(const jo_matrix * const a, const jo_matrix * const b, jo_matrix * const result)
+{
+    register int                i;
+    register int                j;
+    register int                k;
+    register float              sum;
+
+    for (i = 0; i < 4; ++i)
+    {
+        for (j = 0; j < 4; ++j)
+        {
+            sum = 0;
+            for (k = 0; k < 4; ++k)
+                sum += jo_fixed_mult(a->m[k][j], b->m[i][k]);
+            result->m[i][j] = sum;
+        }
+    }
 }
 
 /** @brief Multiply 2 matrix (using floating numbers)
@@ -1354,7 +1750,18 @@ static __jo_force_inline void jo_matrixf_mul_dir(const jo_matrixf * const matrix
 
 */
 
-/** @brief Check if float almost equals 0;
+/** @brief Linear interpolation which guarantees v = v1 when t = 1
+ *  @param v0 First value
+ *  @param v1 Second value
+ *  @param t T [0, 1]
+ *  @return Interpolation between two inputs (v0, v1) for a parameter (t) in the closed unit interval [0, 1].
+ */
+static __jo_force_inline jo_fixed           jo_lerp(const jo_fixed v0, const jo_fixed v1, const jo_fixed t)
+{
+    return (jo_fixed_mult((JO_FIXED_1 - t), v0) + jo_fixed_mult(t, v1));
+}
+
+/** @brief Check if float almost equals 0
  *  @param f floating point number
  *  @return true if the float almost equals 0 otherwise false
  */

@@ -30,8 +30,11 @@
 			<Add option="-DJO_COMPILE_WITH_STORYBOARD_SUPPORT" />
 			<Add option="-DJO_COMPILE_WITH_KEYBOARD_SUPPORT" />
 			<Add option="-DJO_COMPILE_WITH_CONSOLE_SUPPORT" />
+			<Add option="-DJO_COMPILE_WITH_SPRITE_HASHTABLE" />
+			<Add option="-DJO_COMPILE_WITH_SOFTWARE_RENDERER_SUPPORT" />
 		</Compiler>
 		<Unit filename="../Compiler/COMMON/jo_engine_makefile" />
+		<Unit filename="../Doxygen/Doxyfile" />
 		<Unit filename="3d.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -92,6 +95,7 @@
 		<Unit filename="jo/sega_saturn.h" />
 		<Unit filename="jo/sgl_prototypes.h" />
 		<Unit filename="jo/smpc.h" />
+		<Unit filename="jo/software_renderer.h" />
 		<Unit filename="jo/sprite_animator.h" />
 		<Unit filename="jo/sprites.h" />
 		<Unit filename="jo/storyboard.h" />
@@ -103,6 +107,7 @@
 		<Unit filename="jo/vdp2.h" />
 		<Unit filename="jo/vdp2_malloc.h" />
 		<Unit filename="jo/video.h" />
+		<Unit filename="jo/voxel.h" />
 		<Unit filename="keyboard.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -133,6 +138,9 @@
 		<Unit filename="smpc.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="software_renderer.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="sprite_animator.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -161,6 +169,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="video.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="voxel.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>

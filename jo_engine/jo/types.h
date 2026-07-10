@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,9 @@
 #ifndef __JO_TYPES_H__
 # define __JO_TYPES_H__
 
+/** @brief force inline attribute (and prevent Doxygen prototype parsing bug) */
+# define __jo_force_inline                  __attribute__((always_inline)) inline
+
 /** @brief 15 bits color type */
 typedef unsigned short jo_color;
 
@@ -51,6 +54,13 @@ typedef struct
     int                 x;
     int                 y;
 }                       jo_pos2D;
+
+/** @brief 2D position using fixed number */
+typedef struct
+{
+    jo_fixed            x;
+    jo_fixed            y;
+}                       jo_pos2D_fixed;
 
 /** @brief 3D position
   * @remarks Inherits from jo_pos2D (cast friendly)
@@ -70,6 +80,15 @@ typedef struct
     float               y;
     float               z;
 }                       jo_pos3Df;
+
+/** @brief 3D position using fixed numbers
+  */
+typedef struct
+{
+    jo_fixed            x;
+    jo_fixed            y;
+    jo_fixed            z;
+}                       jo_pos3D_fixed;
 
 /** @brief 3D rotation angles
   */
@@ -116,13 +135,37 @@ typedef struct
     float               z;
 }                       jo_vectorf;
 
-/** @brief Vector for 3D computation using fixed number
+/** @brief Vector for 3D computation using integer
   * @remarks Inherits from jo_pos3D (cast friendly)
   */
 typedef struct
 {
     jo_pos3D;
 }                       jo_vector;
+
+/** @brief Vector for 3D computation using fixed number
+  * @remarks Inherits from jo_pos3D_fixed (cast friendly)
+  */
+typedef struct
+{
+    jo_pos3D_fixed;
+}                       jo_vector_fixed;
+
+/** @brief Vector for 2D computation using fixed number */
+typedef struct
+{
+    jo_fixed            x;
+    jo_fixed            y;
+}                       jo_vector2_fixed;
+
+/** @brief Vector4 for 3D computation using fixed number
+  * @remarks Inherits from jo_pos3D_fixed (cast friendly)
+  */
+typedef struct
+{
+    jo_pos3D_fixed;
+    jo_fixed            w;
+}                       jo_vector4_fixed;
 
 /** @brief 4x4 MATRIX for 3D computation using floating numbers */
 typedef union
@@ -141,14 +184,14 @@ typedef union
 /** @brief 4x4 MATRIX for 3D computation using fixed number */
 typedef union
 {
-	int                 m[4][4];
-	int                 table[16];
+	jo_fixed            m[4][4];
+	jo_fixed            table[16];
 	struct
 	{
-		int             m00, m01, m02, m03;
-		int             m10, m11, m12, m13;
-		int             m20, m21, m22, m23;
-		int             m30, m31, m32, m33;
+		jo_fixed        m00, m01, m02, m03;
+		jo_fixed        m10, m11, m12, m13;
+		jo_fixed        m20, m21, m22, m23;
+		jo_fixed        m30, m31, m32, m33;
 	};
 }                       jo_matrix;
 
@@ -225,7 +268,8 @@ typedef struct
     unsigned short      direction;
     unsigned int        color_table_index;
     unsigned int        gouraud_shading_index;
-    unsigned int        fixed_scale;
+    jo_fixed            fixed_scale_x;
+    jo_fixed            fixed_scale_y;
     unsigned int        clipping;
 }                       jo_sprite_attributes;
 

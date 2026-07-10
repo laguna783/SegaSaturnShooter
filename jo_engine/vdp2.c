@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 #include "jo/malloc.h"
 #include "jo/fs.h"
 #include "jo/image.h"
+#include "jo/colors.h"
 #include "jo/sprites.h"
 #include "jo/vdp2.h"
 #include "jo/math.h"
@@ -58,10 +59,12 @@ static unsigned char                *nbg0_cell = JO_NULL;
 #endif
 static int                          *nbg0_scroll_table = JO_NULL;
 //NBG1
-static jo_color                     *nbg1_bitmap = JO_NULL;
+jo_color                            *nbg1_bitmap = JO_NULL;
 static unsigned short               *nbg1_map = JO_NULL;
 static unsigned char                *nbg1_cell = JO_NULL;
+#if JO_COMPILE_USING_SGL
 static int                          *nbg1_scroll_table = JO_NULL;
+#endif
 #ifndef JO_COMPILE_WITH_PRINTF_SUPPORT
 //NBG2
 static unsigned short               *nbg2_map = JO_NULL;
@@ -81,8 +84,10 @@ static unsigned char                *rbg0_cell_a = JO_NULL;
 static unsigned char                *rbg0_cell_b = JO_NULL;
 static unsigned short               *rbg0_map_a = JO_NULL;
 static unsigned short               *rbg0_map_b = JO_NULL;
+#if JO_COMPILE_USING_SGL
 static void                         *rbg0_ktable = JO_NULL;
 static void                         *rbg0_rtable = JO_NULL;
+#endif
 //OTHER
 static unsigned int                 screen_flags = 0;
 static void                         *back_color = JO_NULL;
@@ -230,6 +235,8 @@ void                            jo_img_to_vdp2_cells(const jo_img_8bits * const 
     }
 }
 
+#if JO_COMPILE_USING_SGL
+
 static void                     __jo_create_map(const jo_img_8bits * const img, unsigned short *map, const unsigned short palette_id, const int map_offset)
 {
     register int                x;
@@ -251,12 +258,14 @@ static void                     __jo_create_map(const jo_img_8bits * const img, 
         if (x2 >= x)
             JO_ZERO(x2);
         *map = (JO_MULT_BY_2(y2 + x2 * y) | paloff) + map_offset;
-            ++map;
+        ++map;
         ++y2;
         if (y2 >= y)
             JO_ZERO(y2);
     }
 }
+
+#endif
 
 /*
 ██████╗ ██████╗  ██████╗  ██████╗
@@ -270,20 +279,30 @@ static void                     __jo_create_map(const jo_img_8bits * const img, 
 #define RBG0_OVER_MODE_REPEAT   (0)
 #define RBG0_OVER_MODE_SINGLE   (3)
 
+void                            jo_vdp2_replace_rbg0_plane_a_8bits_image(jo_img_8bits *img, bool vertical_flip)
+{
+    jo_img_to_vdp2_cells(img, vertical_flip, rbg0_cell_a);
+}
+
+void                            jo_vdp2_replace_rbg0_plane_b_8bits_image(jo_img_8bits *img, bool vertical_flip)
+{
+    jo_img_to_vdp2_cells(img, vertical_flip, rbg0_cell_b);
+}
+
+#if JO_COMPILE_USING_SGL
+
 void                            jo_vdp2_set_rbg0_plane_a_8bits_image(jo_img_8bits *img, int palette_id, bool repeat, bool vertical_flip)
 {
-    slPlaneRA(PL_SIZE_1x1);
     if (rbg0_map_a == JO_NULL)
         rbg0_map_a = (unsigned short *)jo_vdp2_malloc(JO_VDP2_RAM_MAP_RBG0, JO_VDP2_MAP_SIZE);
     sl1MapRA(rbg0_map_a);
 	slOverRA(repeat ? RBG0_OVER_MODE_REPEAT : RBG0_OVER_MODE_SINGLE);
-	slKtableRA(rbg0_ktable, K_FIX | K_DOT | K_2WORD | K_ON | K_LINECOL);
-    if (rbg0_cell_b != JO_NULL)
+    if (rbg0_cell_a != JO_NULL)
         jo_vdp2_free(rbg0_cell_a);
     else
     {
         rbg0_cell_a = (unsigned char *)jo_vdp2_malloc(JO_VDP2_RAM_CELL_RBG0, img->width * img->height);
-        if (rbg0_cell_b == JO_NULL)
+        if (rbg0_cell_a == JO_NULL)
             slPageRbg0(rbg0_cell_a, 0, PNB_1WORD | CN_12BIT);
     }
     jo_img_to_vdp2_cells(img, vertical_flip, rbg0_cell_a);
@@ -292,18 +311,16 @@ void                            jo_vdp2_set_rbg0_plane_a_8bits_image(jo_img_8bit
 
 void                            jo_vdp2_set_rbg0_plane_b_8bits_image(jo_img_8bits *img, int palette_id, bool repeat, bool vertical_flip)
 {
-    slPlaneRB(PL_SIZE_1x1);
     if (rbg0_map_b == JO_NULL)
         rbg0_map_b = (unsigned short *)jo_vdp2_malloc(JO_VDP2_RAM_MAP_RBG0, JO_VDP2_MAP_SIZE);
     sl1MapRB(rbg0_map_b);
 	slOverRB(repeat ? RBG0_OVER_MODE_REPEAT : RBG0_OVER_MODE_SINGLE);
-	slKtableRB(rbg0_ktable, K_FIX | K_DOT | K_2WORD | K_ON | K_LINECOL);
     if (rbg0_cell_b != JO_NULL)
         jo_vdp2_free(rbg0_cell_b);
     else
     {
         rbg0_cell_b = (unsigned char *)jo_vdp2_malloc(JO_VDP2_RAM_CELL_RBG0, img->width * img->height);
-        if (rbg0_cell_a == JO_NULL)
+        if (rbg0_cell_b == JO_NULL)
             slPageRbg0(rbg0_cell_b, 0, PNB_1WORD | CN_12BIT);
     }
     jo_img_to_vdp2_cells(img, vertical_flip, rbg0_cell_b);
@@ -319,8 +336,12 @@ void                            jo_vdp2_enable_rbg0(void)
     if (rbg0_ktable == JO_NULL)
         rbg0_ktable = jo_vdp2_malloc_autosize(JO_VDP2_RAM_KTABLE);
     slMakeKtable(rbg0_ktable);
+    slKtableRA(rbg0_ktable, K_FIX | K_DOT | K_2WORD | K_ON | K_LINECOL);
+    slKtableRB(rbg0_ktable, K_FIX | K_DOT | K_2WORD | K_ON | K_LINECOL);
     slCharRbg0(COL_TYPE_256, CHAR_SIZE_1x1);
     slRparaMode(K_CHANGE);
+    slPlaneRA(PL_SIZE_1x1);
+    slPlaneRB(PL_SIZE_1x1);
     JO_ADD_FLAG(screen_flags, RBG0ON);
     slScrAutoDisp(screen_flags);
 }
@@ -330,6 +351,8 @@ void                            jo_vdp2_disable_rbg0(void)
     JO_REMOVE_FLAG(screen_flags, RBG0ON);
     slScrAutoDisp(screen_flags);
 }
+
+#endif
 
 /*
 ███╗   ██╗██████╗  ██████╗  ██████╗
@@ -343,7 +366,11 @@ void                            jo_vdp2_disable_rbg0(void)
 #ifdef JO_COMPILE_WITH_PRINTF_SUPPORT
 void                     jo_init_nbg0_printf(void)
 {
+#if JO_COMPILE_USING_SGL
     slCharNbg0(COL_TYPE_256, CHAR_SIZE_1x1);
+#else
+    //TODO
+#endif
     jo_set_printf_palette_color(JO_COLOR_INDEX_White, JO_COLOR_White);
     jo_set_printf_palette_color(JO_COLOR_INDEX_Black, JO_COLOR_Black);
     jo_set_printf_palette_color(JO_COLOR_INDEX_Red, JO_COLOR_Red);
@@ -385,6 +412,8 @@ void                            jo_vdp2_disable_nbg0_line_scroll(void)
     }
 }
 
+#if JO_COMPILE_USING_SGL
+
 void                            jo_vdp2_compute_nbg0_line_scroll(unsigned short offset)
 {
     slLineScrollTable0(nbg0_scroll_table + offset);
@@ -399,6 +428,8 @@ int                             *jo_vdp2_enable_nbg0_line_scroll(void)
     slLineScrollTable0(nbg0_scroll_table);
     return (nbg0_scroll_table);
 }
+
+#endif
 
 /*
 ███╗   ██╗██████╗  ██████╗  ██╗
@@ -443,6 +474,8 @@ void                            jo_vdp2_draw_bitmap_nbg1_line(int x0, int y0, in
             y0 += sy;
         }
     }
+    JO_ADD_FLAG(screen_flags, NBG1ON);
+    slScrAutoDisp(screen_flags);
 }
 
 void                            jo_vdp2_clear_bitmap_nbg1(const jo_color color)
@@ -459,7 +492,11 @@ void                            jo_vdp2_clear_bitmap_nbg1(const jo_color color)
         jo_dma_copy(buf, vram_ptr, JO_VDP2_WIDTH * sizeof(color));
         vram_ptr += JO_VDP2_WIDTH;
     }
+    JO_ADD_FLAG(screen_flags, NBG1ON);
+    slScrAutoDisp(screen_flags);
 }
+
+#if JO_COMPILE_USING_SGL
 
 void			                jo_vdp2_set_nbg1_8bits_image(jo_img_8bits *img, int palette_id, bool vertical_flip)
 {
@@ -472,38 +509,89 @@ void			                jo_vdp2_set_nbg1_8bits_image(jo_img_8bits *img, int palet
         nbg1_map = (unsigned short *)jo_vdp2_malloc(JO_VDP2_RAM_MAP_NBG1, JO_VDP2_MAP_SIZE);
     slMapNbg1(nbg1_map, nbg1_map, nbg1_map, nbg1_map);
     nbg1_cell = (unsigned char *)jo_vdp2_malloc(JO_VDP2_RAM_CELL_NBG1, img->width * img->height);
-	slPageNbg1(nbg1_cell, 0, PNB_1WORD | CN_12BIT);
+    slPageNbg1(nbg1_cell, 0, PNB_1WORD | CN_12BIT);
     jo_img_to_vdp2_cells(img, vertical_flip, nbg1_cell);
-	__jo_create_map(img, nbg1_map, palette_id, JO_VDP2_CELL_TO_MAP_OFFSET(nbg1_cell));
+    __jo_create_map(img, nbg1_map, palette_id, JO_VDP2_CELL_TO_MAP_OFFSET(nbg1_cell));
+    JO_ADD_FLAG(screen_flags, NBG1ON);
+    slScrAutoDisp(screen_flags);
 }
 
-void			                jo_vdp2_set_nbg1_image(const jo_img *const img, const unsigned short left, const unsigned short top)
+#endif
+
+void			                jo_vdp2_set_nbg1_image(const jo_img *const img, short left, short top)
 {
     register int                y;
+    int                         right;
+    int                         len;
+    int                         bottom;
+    int                         height;
     register jo_color           *vram_ptr;
     register jo_color           *img_ptr;
 
+    if (left >= JO_VDP2_WIDTH || left <= -img->width)
+        return ;
+    if (top >= JO_VDP2_HEIGHT || top <= -img->height)
+        return;
     __jo_switch_to_bitmap_mode();
     if (nbg1_bitmap == JO_NULL)
         nbg1_bitmap = jo_vdp2_malloc(JO_VDP2_RAM_BITMAP_NBG1, JO_VDP2_WIDTH * JO_VDP2_HEIGHT * sizeof(*nbg1_bitmap));
+#if JO_COMPILE_USING_SGL
     slBitMapNbg1(COL_TYPE_32768, JO_VDP2_SIZE, nbg1_bitmap);
-    if (top)
+#else
+    //TODO
+#endif
+    if (img->data == JO_NULL)
+        return ;
+    img_ptr = img->data;
+    JO_ZERO(y);
+    if (top != 0)
+    {
+        if (top < 0)
+        {
+            y = -top;
+            img_ptr += img->width * y;
+            JO_ZERO(top);
+        }
         vram_ptr = nbg1_bitmap + (JO_VDP2_WIDTH * top);
+    }
     else
         vram_ptr = nbg1_bitmap;
-    img_ptr = img->data;
-    for (JO_ZERO(y); y < img->height; ++y)
+    bottom = top + img->height;
+    if (bottom >= JO_VDP2_HEIGHT)
+        height = (JO_VDP2_HEIGHT - top - 1);
+    else
+        height = img->height;
+    for (; y < height; ++y)
     {
-        if (left)
+        if (left > 0)
+        {
             vram_ptr += left;
-        jo_dma_copy(img_ptr, vram_ptr, img->width * sizeof(*img_ptr));
-        if (left)
+            right = left + img->width;
+            if (right >= JO_VDP2_WIDTH)
+                len = img->width - (right - JO_VDP2_WIDTH);
+            else
+                len = img->width;
+            jo_dma_copy(img_ptr, vram_ptr, len * sizeof(*img_ptr));
             vram_ptr += JO_VDP2_WIDTH - left;
-        else
+        }
+        else if (left < 0)
+        {
+            len = img->width + left;
+            jo_dma_copy(img_ptr - left, vram_ptr, len * sizeof(*img_ptr));
             vram_ptr += JO_VDP2_WIDTH;
+        }
+        else
+        {
+            jo_dma_copy(img_ptr, vram_ptr, img->width * sizeof(*img_ptr));
+            vram_ptr += JO_VDP2_WIDTH;
+        }
         img_ptr += img->width;
     }
+    JO_ADD_FLAG(screen_flags, NBG1ON);
+    slScrAutoDisp(screen_flags);
 }
+
+#if JO_COMPILE_USING_SGL
 
 void                            jo_vdp2_disable_nbg1_line_scroll(void)
 {
@@ -528,6 +616,8 @@ int                             *jo_vdp2_enable_nbg1_line_scroll(void)
     slLineScrollTable1(nbg1_scroll_table);
     return (nbg1_scroll_table);
 }
+
+#endif
 
 #ifndef JO_COMPILE_WITH_PRINTF_SUPPORT
 
@@ -742,6 +832,8 @@ void			                jo_vdp2_set_nbg3_8bits_image(jo_img_8bits *img, int palet
 ╚══════╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝
 */
 
+#if JO_COMPILE_USING_SGL
+
 void        jo_set_displayed_screens(const jo_scroll_screen scroll_screen_flags)
 {
     screen_flags = (unsigned int)scroll_screen_flags;
@@ -781,6 +873,8 @@ void        jo_enable_screen_transparency(const jo_scroll_screen screen, const u
     }
     slScrTransparent(screen);
 }
+
+#endif
 
 /*
 ** END OF FILE

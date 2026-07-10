@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -163,7 +163,13 @@ void                    jo_clear_screen_line(const int y)
 {
     register int        x;
 
-    for (JO_ZERO(x); x < 40; ++x)
+    for (JO_ZERO(x);
+# if defined(JO_480i)
+x < 44;
+#else
+x < 40;
+#endif
+++x)
     {
 #if JO_COMPILE_USING_SGL
         slPrint(" ", slLocate(x, y));
@@ -362,6 +368,9 @@ void                        jo_memset(const void * const restrict ptr, const int
     unsigned int            tail;
     unsigned int            x;
     unsigned char           xx;
+
+    if(num == 0)
+        return;
 
     x = value & 0xff;
     xx = value & 0xff;

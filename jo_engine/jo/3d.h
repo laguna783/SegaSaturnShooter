@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -122,6 +122,8 @@ typedef struct
 extern jo_3d_quad *__jo_sprite_quad[JO_MAX_SPRITE];
 bool    jo_3d_create_sprite_quad(const int sprite_id);
 
+#if JO_COMPILE_USING_SGL
+
 /*
  ██████╗ █████╗ ███╗   ███╗███████╗██████╗  █████╗
 ██╔════╝██╔══██╗████╗ ████║██╔════╝██╔══██╗██╔══██╗
@@ -162,9 +164,9 @@ static  __jo_force_inline void      jo_3d_camera_set_target(jo_camera * const ca
  *  @param cam Pointer to a camera struct
  *  @param angle Z-angle in degree
  */
-static  __jo_force_inline void      jo_3d_camera_set_z_angle(jo_camera * const cam, const int angle )
+static  __jo_force_inline void      jo_3d_camera_set_z_angle(jo_camera * const cam, const int angle)
 {
-    cam->z_angle = DEGtoANG(angle);
+    cam->z_angle = jo_DEGtoANG_int(angle);
 }
 
 /** @brief Initialize the camera with default values
@@ -242,6 +244,41 @@ static  __jo_force_inline unsigned int       jo_3d_get_displayed_polygon_count(v
 
 */
 
+/** @brief Create a mesh programmatically from vertices
+ *  @param quad_count Quad count (Quad count == Polygon count)
+ *  @param vertices An array of jo_vertice (4 * quad_count)
+ *  @param normals An array of jo_vector (quad_count)
+ *  @return The mesh
+ *  @remarks The return type can be casted to (jo_3d_mesh *)
+ */
+jo_3d_mesh       *jo_3d_create_mesh_from_vertices_and_normals(const unsigned int quad_count, jo_vertice * const vertices, jo_vector * const normals);
+
+/** @brief Create a mesh programmatically from vertices
+ *  @param quad_count Quad count (Quad count == Polygon count)
+ *  @param vertices An array of jo_vertice (4 * quad_count)
+ *  @return The mesh
+ *  @remarks The return type can be casted to (jo_3d_mesh *)
+ */
+static  __jo_force_inline jo_3d_mesh       *jo_3d_create_mesh_from_vertices(const unsigned int quad_count, jo_vertice * const vertices)
+{
+    return (jo_3d_create_mesh_from_vertices_and_normals(quad_count, vertices, JO_NULL));
+}
+
+/** @brief Create a mesh programmatically from vertices
+ *  @param quad_count Quad count (Quad count == Polygon count)
+ *  @return The mesh
+ *  @remarks The return type can be casted to (jo_3d_mesh *)
+ */
+static  __jo_force_inline jo_3d_mesh       *jo_3d_create_mesh(const unsigned int quad_count)
+{
+    return (jo_3d_create_mesh_from_vertices_and_normals(quad_count, JO_NULL, JO_NULL));
+}
+
+/** @brief Free a mesh created with jo_3d_create_mesh()
+ *  @param mesh The mesh to free
+ */
+void                        jo_3d_free_mesh(const jo_3d_mesh * const mesh);
+
 /** @brief Create a four vertices polygon (Quadrilateral shape)
  *  @param quad Address to a jo_3d_quad allocated struct
  *  @param vertices Vertices coords (table of 4 jo_vertice)
@@ -304,6 +341,108 @@ void                                jo_3d_set_mesh_texture(jo_3d_mesh * const me
 static  __jo_force_inline void      jo_3d_set_texture(jo_3d_quad * const quad, const int sprite_id)
 {
     jo_3d_set_mesh_polygon_texture((jo_3d_mesh *)quad, sprite_id, 0);
+}
+
+/** @brief Set wireframe mode on the mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param index polygon index on the mesh
+ *  @param wireframe True to enable wireframe mode
+ */
+void                        jo_3d_set_mesh_polygon_wireframe(jo_3d_mesh * const mesh, const unsigned int index, bool wireframe);
+
+/*
+   8 BITS PALETTE HANDLING
+*/
+
+/** @brief Set a palette on the mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param index polygon index on the mesh
+ *  @param palette_id Palette id from jo_create_palette()
+ */
+static  __jo_force_inline void      jo_3d_set_mesh_polygon_palette(jo_3d_mesh * const mesh, const int palette_id, const unsigned int index)
+{
+    mesh->data.attbl[index].colno = JO_MULT_BY_256(palette_id);
+}
+
+/** @brief Set a palette on one polygon on the mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param palette_id Palette id from jo_create_palette()
+ */
+static  __jo_force_inline void      jo_3d_set_mesh_palette(jo_3d_mesh * const mesh, const int palette_id)
+{
+    for (unsigned int i = 0; i < mesh->data.nbPolygon; ++i)
+        jo_3d_set_mesh_polygon_palette(mesh, palette_id, i);
+}
+
+/** @brief Set a palette on the quadrilateral
+ *  @param quad Address to a jo_3d_quad allocated struct
+ *  @param palette_id Palette id from jo_create_palette()
+ */
+static  __jo_force_inline void      jo_3d_set_palette(jo_3d_quad * const quad, const int palette_id)
+{
+    quad->attribute.colno = JO_MULT_BY_256(palette_id);
+}
+
+/** @brief Set a palette on a sprite (3D)
+ *  @param sprite_id Sprite Id returned by jo_sprite_add(), jo_sprite_add_tga() or jo_sprite_add_image_pack()
+ *  @param palette_id Palette id from jo_create_palette()
+ *  @return true if succeeded otherwise false
+ */
+static  __jo_force_inline bool      jo_3d_set_sprite_palette(const int sprite_id, const int palette_id)
+{
+    if (__jo_sprite_quad[sprite_id] == JO_NULL && !jo_3d_create_sprite_quad(sprite_id)) return (false);
+    jo_3d_set_palette(__jo_sprite_quad[sprite_id], palette_id);
+    return (true);
+}
+
+/** @brief Enable/Disable High Speed Shrink on one polygon on the mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param enabled true to enable High Speed Shrink
+ *  @param index polygon index on the mesh
+ */
+void                                jo_3d_set_mesh_polygon_high_speed_shrink(jo_3d_mesh * const mesh, const bool enabled, const unsigned int index);
+
+/** @brief Enable/Disable High Speed Shrink on the mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param enabled true to enable High Speed Shrink
+ */
+void                                jo_3d_set_mesh_high_speed_shrink(jo_3d_mesh * const mesh, const bool enabled);
+
+/*
+███╗   ███╗███████╗███████╗██╗  ██╗    ██╗   ██╗███████╗██████╗ ████████╗██╗ ██████╗███████╗       ██╗       ███╗   ██╗ ██████╗ ██████╗ ███╗   ███╗ █████╗ ██╗
+████╗ ████║██╔════╝██╔════╝██║  ██║    ██║   ██║██╔════╝██╔══██╗╚══██╔══╝██║██╔════╝██╔════╝       ██║       ████╗  ██║██╔═══██╗██╔══██╗████╗ ████║██╔══██╗██║
+██╔████╔██║█████╗  ███████╗███████║    ██║   ██║█████╗  ██████╔╝   ██║   ██║██║     █████╗      ████████╗    ██╔██╗ ██║██║   ██║██████╔╝██╔████╔██║███████║██║
+██║╚██╔╝██║██╔══╝  ╚════██║██╔══██║    ╚██╗ ██╔╝██╔══╝  ██╔══██╗   ██║   ██║██║     ██╔══╝      ██╔═██╔═╝    ██║╚██╗██║██║   ██║██╔══██╗██║╚██╔╝██║██╔══██║██║
+██║ ╚═╝ ██║███████╗███████║██║  ██║     ╚████╔╝ ███████╗██║  ██║   ██║   ██║╚██████╗███████╗    ██████║      ██║ ╚████║╚██████╔╝██║  ██║██║ ╚═╝ ██║██║  ██║███████╗
+╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝      ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝╚══════╝    ╚═════╝      ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝
+*/
+
+/** @brief Set vertice position in mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param x X position
+ *  @param y Y position
+ *  @param z Z position
+ *  @param index vertice index on the mesh (4 vertices for each quad)
+ */
+static  __jo_force_inline void      jo_3d_set_mesh_vertice(jo_3d_mesh * const mesh, const jo_fixed x, const jo_fixed y, const jo_fixed z, const unsigned int index)
+{
+    mesh->data.pntbl[index][0] = x;
+    mesh->data.pntbl[index][1] = y;
+    mesh->data.pntbl[index][2] = z;
+}
+
+/** @brief Set quad normal in mesh
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param x X position
+ *  @param y Y position
+ *  @param z Z position
+ *  @param index quad index on the mesh
+ */
+static  __jo_force_inline void      jo_3d_set_mesh_normal(jo_3d_mesh * const mesh, const jo_fixed x, const jo_fixed y, const jo_fixed z, const unsigned int index)
+{
+    mesh->data.pltbl[index].norm[0] = x;
+    mesh->data.pltbl[index].norm[1] = y;
+    mesh->data.pltbl[index].norm[2] = z;
 }
 
 /*
@@ -420,12 +559,23 @@ static  __jo_force_inline void      jo_3d_set_screen_doors(jo_3d_quad *const qua
 
 */
 
+/** @brief Set the color on one polygon on the mesh with wireframe option
+ *  @param mesh Address to a jo_3d_mesh allocated struct
+ *  @param color Color
+ *  @param index polygon index on the mesh
+ *  @param wireframe True to display only the edge of polygons
+ */
+void                                jo_3d_set_mesh_polygon_color_ex(jo_3d_mesh * const mesh, const jo_color color, const unsigned int index, bool wireframe);
+
 /** @brief Set the color on one polygon on the mesh
  *  @param mesh Address to a jo_3d_mesh allocated struct
  *  @param color Color
  *  @param index polygon index on the mesh
  */
-void                                jo_3d_set_mesh_polygon_color(jo_3d_mesh * const mesh, const jo_color color, const unsigned int index);
+static  __jo_force_inline void      jo_3d_set_mesh_polygon_color(jo_3d_mesh * const mesh, const jo_color color, const unsigned int index)
+{
+    jo_3d_set_mesh_polygon_color_ex(mesh, color, index, false);
+}
 
 /** @brief Set the color on the mesh
  *  @param mesh Address to a jo_3d_mesh allocated struct
@@ -449,7 +599,6 @@ static  __jo_force_inline void      jo_3d_set_color(jo_3d_quad * const quad, con
 ██║╚██╔╝██║██╔══██║   ██║   ██╔══██╗██║ ██╔██╗
 ██║ ╚═╝ ██║██║  ██║   ██║   ██║  ██║██║██╔╝ ██╗
 ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝
-
 */
 
 /** @brief Push 3D matrix
@@ -483,9 +632,9 @@ static  __jo_force_inline void      jo_3d_pop_matrix(void)
  */
 static  __jo_force_inline void      jo_3d_rotate_matrix(short x, short y, short z)
 {
-    slRotX(JO_MULT_BY_65536(x) / 360.0);
-    slRotY(JO_MULT_BY_65536(y) / 360.0);
-    slRotZ(JO_MULT_BY_65536(z) / 360.0);
+    slRotX(jo_DEGtoANG_int(x));
+    slRotY(jo_DEGtoANG_int(y));
+    slRotZ(jo_DEGtoANG_int(z));
 }
 
 /** @brief Rotate 3D matrix using degree (X axis)
@@ -493,7 +642,7 @@ static  __jo_force_inline void      jo_3d_rotate_matrix(short x, short y, short 
  */
 static  __jo_force_inline void      jo_3d_rotate_matrix_x(short x)
 {
-    slRotX(JO_MULT_BY_65536(x) / 360.0);
+    slRotX(jo_DEGtoANG_int(x));
 }
 
 /** @brief Rotate 3D matrix using degree (Y axis)
@@ -501,7 +650,7 @@ static  __jo_force_inline void      jo_3d_rotate_matrix_x(short x)
  */
 static  __jo_force_inline void      jo_3d_rotate_matrix_y(short y)
 {
-    slRotY(JO_MULT_BY_65536(y) / 360.0);
+    slRotY(jo_DEGtoANG_int(y));
 }
 
 /** @brief Rotate 3D matrix using degree (Z axis)
@@ -509,7 +658,7 @@ static  __jo_force_inline void      jo_3d_rotate_matrix_y(short y)
  */
 static  __jo_force_inline void      jo_3d_rotate_matrix_z(short z)
 {
-    slRotZ(JO_MULT_BY_65536(z) / 360.0);
+    slRotZ(jo_DEGtoANG_int(z));
 }
 
 /** @brief Rotate 3D matrix using radian
@@ -705,6 +854,7 @@ static  __jo_force_inline void      jo_3d_draw_sprite_at(const int sprite_id, co
  */
 static  __jo_force_inline void      jo_3d_draw_billboard(const int sprite_id, const int x, const int y, const int z)
 {
+    extern jo_pos3D __jo_sprite_pos;
     __internal_jo_sprite_set_position3D(x, y, z);
     jo_sprite_draw(sprite_id, &__jo_sprite_pos, true, true);
 }
@@ -722,11 +872,15 @@ static  __jo_force_inline void      jo_3d_draw_scaled_billboard(const int sprite
         jo_3d_draw_billboard(sprite_id, x, y, z);
     else
     {
+        extern jo_pos3D __jo_sprite_pos;
         __internal_jo_sprite_set_position3D(x, y, z);
-        unsigned int previous_scale = __jo_sprite_attributes.fixed_scale;
-        __jo_sprite_attributes.fixed_scale = JO_MULT_BY_65536(scale);
+        jo_fixed previous_scale_x = __jo_sprite_attributes.fixed_scale_x;
+        jo_fixed previous_scale_y = __jo_sprite_attributes.fixed_scale_y;
+        __jo_sprite_attributes.fixed_scale_x = jo_int2fixed(scale);
+        __jo_sprite_attributes.fixed_scale_y = jo_int2fixed(scale);
         jo_sprite_draw(sprite_id, &__jo_sprite_pos, true, true);
-        __jo_sprite_attributes.fixed_scale = previous_scale;
+        __jo_sprite_attributes.fixed_scale_x = previous_scale_x;
+        __jo_sprite_attributes.fixed_scale_y = previous_scale_y;
     }
 }
 
@@ -758,6 +912,23 @@ static  __jo_force_inline void      jo_3d_set_scalef(const float x, const float 
 static  __jo_force_inline void      jo_3d_set_scale(const int x, const int y, const int z)
 {
     slScale(JO_MULT_BY_65536(x), JO_MULT_BY_65536(y), JO_MULT_BY_65536(z));
+}
+
+/** @brief Change scale using fixed number
+ *  @param x X Scale
+ *  @param y Y Scale
+ *  @param z Z Scale
+ */
+static  __jo_force_inline void      jo_3d_set_scale_fixed(const jo_fixed x, const jo_fixed y, const jo_fixed z)
+{
+    slScale(x, y, z);
+}
+
+/** @brief Restore default scale for every 3d model displayed after this call
+ */
+static  __jo_force_inline void	jo_3d_restore_scale(void)
+{
+    slScale(JO_NO_ZOOM, JO_NO_ZOOM, JO_NO_ZOOM);
 }
 
 /*
@@ -794,7 +965,7 @@ static  __jo_force_inline void      jo_3d_perspective_angle(const int angle)
     if (angle < 10 || angle > 160)
         jo_core_error("Valid angle range is 10 to 160");
 #endif
-    slPerspective(DEGtoANG(angle));
+    slPerspective(jo_DEGtoANG_int(angle));
 }
 
 /** @brief Set the display level of the viewing volume
@@ -804,6 +975,8 @@ static  __jo_force_inline void      jo_3d_display_level(const unsigned short lev
 {
     slZdspLevel(level);
 }
+
+#endif
 
 #endif /* !JO_COMPILE_WITH_3D_SUPPORT */
 

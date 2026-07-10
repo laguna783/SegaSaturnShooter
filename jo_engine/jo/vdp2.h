@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,15 @@
  *
  *  @brief Jo Engine VDP2 definition and tools
  *  @bug No known bugs.
+ */
+
+ /*
+    ▲ IMPORTANT NOTE ABOUT VDP2 USAGE (extract from ST-058-R2-060194.pdf p61):
+    Depending on the color count of NBG0 and NBG1, the scroll screen that cannot be displayed will appear.
+
+    - When NBG0 is set as 2048 or 32768 colors, NBG2 can not longer be displayed.
+    - When NBG0 is set at 16,770,000 colors, NBG1 to NBG3 can not longer be displayed.
+    - When NBG1 is set at 2048 or 32768 colors, NBG3 can longer be displayed.
  */
 
 #ifndef __JO_VDP2_H__
@@ -179,7 +188,7 @@ void    jo_vdp2_set_nbg3_8bits_image(jo_img_8bits *img, int palette_id, bool ver
  *  @param left Left location
  *  @param top Top location
  */
-void	jo_vdp2_set_nbg1_image(const jo_img * const img, const unsigned short left, const unsigned short top);
+void	jo_vdp2_set_nbg1_image(const jo_img * const img, short left, short top);
 
 /** @brief Clear NBG1 bitmap
  *  @param color Clear color
@@ -370,6 +379,24 @@ void                            jo_vdp2_set_rbg0_plane_a_8bits_image(jo_img_8bit
  */
 void                            jo_vdp2_set_rbg0_plane_b_8bits_image(jo_img_8bits *img, int palette_id, bool repeat, bool vertical_flip);
 
+/** @brief Replace plane A image
+ *  @param img 8 bits 255 colors max image. (Width AND height must be a multiple of 8)
+ *  @param vertical_flip Flip image vertically
+ *  @warning jo_vdp2_set_rbg0_plane_a_8bits_image() MUST be called before
+ *  @warning Image need to be clockwised rotated (right) because of an optimisation and the previous palette is preserved
+ */
+void                            jo_vdp2_replace_rbg0_plane_a_8bits_image(jo_img_8bits *img, bool vertical_flip);
+
+/** @brief Replace plane B image
+ *  @param img 8 bits 255 colors max image. (Width AND height must be a multiple of 8)
+ *  @param vertical_flip Flip image vertically
+ *  @warning jo_vdp2_set_rbg0_plane_b_8bits_image() MUST be called before
+ *  @warning Image need to be clockwised rotated (right) because of an optimisation and the previous palette is preserved
+ */
+void                            jo_vdp2_replace_rbg0_plane_b_8bits_image(jo_img_8bits *img, bool vertical_flip);
+
+#if JO_COMPILE_USING_SGL
+
 /** @brief Draw plane A
   * @param use_scroll_format_matrix Convert current matrix to scroll format matrix
  */
@@ -386,6 +413,8 @@ static  __jo_force_inline void  jo_vdp2_draw_rbg0_plane_b(const bool use_scroll_
     slCurRpara(RB); if (use_scroll_format_matrix) slScrMatConv(); slScrMatSet();
 }
 
+#endif
+
 /*
 ███╗   ███╗ ██████╗ ███████╗ █████╗ ██╗ ██████╗
 ████╗ ████║██╔═══██╗╚══███╔╝██╔══██╗██║██╔════╝
@@ -394,6 +423,8 @@ static  __jo_force_inline void  jo_vdp2_draw_rbg0_plane_b(const bool use_scroll_
 ██║ ╚═╝ ██║╚██████╔╝███████╗██║  ██║██║╚██████╗
 ╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝ ╚═════╝
 */
+
+#if JO_COMPILE_USING_SGL
 
 /** @brief Enable mozaic effect for scroll screen
  *  @param screens Scroll screens (You can pass multiple value using pipe(|). Example: JO_NBG1_SCREEN|JO_NBG2_SCREEN)
@@ -414,6 +445,8 @@ static  __jo_force_inline void      jo_disable_all_screen_mozaic(void)
     slScrMosSize(1, 1);
     slScrMosaicOn(0);
 }
+
+#endif
 
 /*
 ██╗  ██╗ ██████╗ ██████╗ ██╗███████╗ ██████╗ ███╗   ██╗████████╗ █████╗ ██╗

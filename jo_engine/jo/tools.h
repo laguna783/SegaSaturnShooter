@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,11 @@
 ** INCLUDES
 */
 #include "math.h"
+
+/** @brief Fixed value of JO_TV_WIDTH */
+#define JO_FIXED_TV_WIDTH   JO_INT_TO_FIXED(JO_TV_WIDTH)
+/** @brief Fixed value of JO_TV_HEIGHT */
+#define JO_FIXED_TV_HEIGHT  JO_INT_TO_FIXED(JO_TV_HEIGHT)
 
 /** @brief Swap Short endian
   * @param value Little or Big endian short

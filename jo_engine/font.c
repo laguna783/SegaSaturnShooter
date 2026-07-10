@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include "jo/tga.h"
 #include "jo/malloc.h"
 #include "jo/math.h"
+#include "jo/colors.h"
 #include "jo/sprites.h"
 
 #ifdef JO_COMPILE_WITH_FS_SUPPORT

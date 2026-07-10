@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -57,6 +57,7 @@ typedef union
     char            str[4];
     bool            booleans[4];
     void            *ptr;
+    char            *ch_arr;
     int             integer;
 }                   jo_list_data;
 

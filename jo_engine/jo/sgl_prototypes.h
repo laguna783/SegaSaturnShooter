@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -66,10 +66,11 @@
 #define	PER_ID_StnPad		0x02	/* サターン標準パッド			*/
 #define	PER_ID_StnMouse		0x23	/* サターンマウス			*/
 #define	PER_ID_ShuttleMouse	0xe3	/* シャトルマウス			*/
+#define	PER_ID_ExtKeyBoard	0x30	/* Extended-size keyboard device		*/
+#define	PER_ID_StnKeyBoard	0x34	/* Saturn keyboard			*/
 
 #define	    toFIXED(a)		((FIXED)(65536.0 * (a)))
 #define	    POStoFIXED(x,y,z)	{toFIXED(x),toFIXED(y),toFIXED(z)}
-#define	    DEGtoANG(d)		((ANGLE)((65536.0 * (d)) / 360.0))
 #define	NORMAL(x,y,z)		{POStoFIXED(x,y,z)
 #define	VERTICES(v0,v1,v2,v3)	{v0 , v1 , v2 , v3}}
 #define	C_RGB(r,g,b)		(((b)&0x1f)<<10|((g)&0x1f)<<5|((r)&0x1f)|0x8000)
@@ -244,6 +245,19 @@ typedef struct  			/* デジタルデバイス			*/
     Uint16	pull;			/* ボタン引上データ			*/
     Uint32	dummy2[4];		/* ダミー２				*/
 } PerDigital;
+
+typedef struct {			/* Analogue devices			*/
+	Uint8	id;			/* Peripheral ID			*/
+	Uint8	ext;			/* Extended data size			*/
+	Uint16	data;			/* Button current data			*/
+	Uint16	push;			/* Button press data			*/
+	Uint16	pull;			/* Button pull data			*/
+	Uint8	x;			/* Absolute X-axis data value			*/
+	Uint8	y;			/* Absolute value of the Y-axis data			*/
+	Uint8	z;			/* Absolute value of the Z-axis data			*/
+	Uint8	dummy1;			/* Dummy 1				*/
+	Uint32	dummy2[3];		/* Dummy 2				*/
+} PerAnalog;
 
 enum BooleanLogic  			/* 論理定数１（偽、真） */
 {
@@ -880,6 +894,8 @@ void GFS_Close(GfsHn gfs);
 void GFS_GetFileSize(GfsHn gfs, Sint32 *sctsz, Sint32 *nsct, Sint32 *lstsz);
 Sint32 GFS_NwCdRead(GfsHn gfs, Sint32 nsct);
 Sint32 GFS_SetTransPara(GfsHn gfs, Sint32 tsize);
+Sint32 GFS_SetReadPara(GfsHn gfs, Sint32 nsct);
+Sint32 GFS_SetTmode(GfsHn gfs, Sint32 tmode);
 
 Sint32 GFS_LoadDir(Sint32 fid, GfsDirTbl *dirtbl);
 Sint32 GFS_SetDir(GfsDirTbl *dirtbl);

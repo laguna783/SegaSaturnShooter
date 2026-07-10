@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -131,13 +131,15 @@ int			jo_create_sprite_anim(const unsigned short sprite_id, const unsigned short
     return (__jo_sprite_anim_id);
 }
 
-void        jo_clear_all_sprite_anim(void)
+void    jo_clear_all_sprite_anim(void)
 {
     __jo_sprite_anim_id = -1;
-    jo_core_remove_callback(__jo_sprite_anim_callback_event_id);
-    JO_ZERO(__jo_sprite_anim_callback_event_id);
+    if (__jo_sprite_anim_callback_event_id > 0)  // Avoid calling with an invalid value.
+    {
+        jo_core_remove_callback(__jo_sprite_anim_callback_event_id);
+        JO_ZERO(__jo_sprite_anim_callback_event_id); // Prevents reuse of an invalid value.
+    }
 }
-
 /*
 ** END OF FILE
 */

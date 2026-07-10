@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -89,13 +89,11 @@ void                                        jo_3d_init(void);
 void                                        jo_vdp1_buffer_init(void);
 void                                        jo_vdp1_buffer_reset(void);
 void                                        jo_vdp1_flush(void);
-void                                        jo_input_update(void);
 void                                        jo_input_init(void);
 #ifdef JO_COMPILE_WITH_FS_SUPPORT
 int						                    jo_fs_init(void);
 #endif
 void                                        jo_fs_do_background_jobs(void);
-void                                        jo_add_memory_zone(unsigned char *ptr, const unsigned int size_in_bytes);
 void                                        jo_sprite_init(void);
 void                                        jo_time_init(unsigned char mode);
 void                                        jo_get_inputs_vblank(void);
@@ -169,20 +167,14 @@ static bool                 jo_init_memory(void)
     {
         jo_enable_extended_ram_cartridge_support();
         jo_set_a_bus_register();
-        jo_add_memory_zone((unsigned char *)0x2247ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x2267ffff, 0x180000);
+        jo_add_memory_zone((unsigned char *)0x22400000, 0x80000);
+        jo_add_memory_zone((unsigned char *)0x22600000, 0x80000);
     }
     else if (jo_get_extended_ram_cartridge_type() == CART_32MBits)
     {
         jo_enable_extended_ram_cartridge_support();
         jo_set_a_bus_register();
-        jo_add_memory_zone((unsigned char *)0x2247ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x2267ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x2287ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x22a7ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x22c7ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x22e7ffff, 0x180000);
-        jo_add_memory_zone((unsigned char *)0x2307ffff, 0x180000);
+        jo_add_memory_zone((unsigned char *)0x22400000, 0x200000);
     }
 #endif
 #ifdef JO_DEBUG
@@ -292,9 +284,17 @@ static void         jo_core_init_vdp(const jo_color back_color)
     JO_VDP2_PRIR = 0x4;
 
     jo_vdp2_clear_bitmap_nbg1(back_color);
-    jo_set_vdp2_4k_default_color_palette();
     jo_set_printf_color_index(0);
 #endif
+/*Credit: slinga-homebrew, fafling and Ponut64
+  https://github.com/johannes-fetz/joengine/pull/58
+*/
+# if defined(JO_480i)
+    JO_VDP2_CRAOFB = 0x0010 | (JO_VDP2_CRAOFB & 0xFF0F);
+#  if defined(JO_COMPILE_WITH_PRINTF_SUPPORT)
+    jo_vdp2_zoom_nbg0(0.5f);
+#  endif
+# endif
 }
 
 void                    __jo_core_set_screens_order(jo_scroll_screen screen1, ...)
@@ -559,7 +559,6 @@ void            jo_core_suspend(void)
 #if JO_COMPILE_USING_SGL
         slSynch();
 #else
-        jo_input_update();
         jo_wait_vblank_out();
         jo_wait_vblank_in();
 #endif
@@ -633,7 +632,6 @@ void			        jo_core_run(void)
         jo_wait_vblank_out();
         __jo_vblank_callbacks();
         jo_wait_vblank_in();
-        jo_input_update();
 #endif
         __jo_gouraud_shading_runtime_index = -1;
     }

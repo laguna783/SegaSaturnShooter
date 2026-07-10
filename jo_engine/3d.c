@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2024, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include "jo/core.h"
 #include "jo/tools.h"
 #include "jo/malloc.h"
+#include "jo/colors.h"
 #include "jo/sprites.h"
 #include "jo/fs.h"
 #include "jo/math.h"
@@ -46,6 +47,8 @@
 
 #ifdef JO_COMPILE_WITH_3D_SUPPORT
 
+extern jo_picture_definition        __jo_sprite_pic[JO_MAX_SPRITE];
+extern jo_sprite_attributes         __jo_sprite_attributes;
 jo_3d_quad                          *__jo_sprite_quad[JO_MAX_SPRITE];
 
 void                                jo_3d_init(void)
@@ -55,6 +58,9 @@ void                                jo_3d_init(void)
     jo_3d_display_level(3);
     for (JO_ZERO(i); i < JO_MAX_SPRITE; ++i)
         __jo_sprite_quad[i] = JO_NULL;
+#if JO_COMPILE_USING_SGL
+    slDynamicFrame(ON); // Makes nearby objects close to the camera not disappear on real hardware. Credit : Ponut & TailsOfSaturn
+#endif
 }
 
 static  __jo_force_inline void      __jo_to_sgl_fixed_vertices(jo_vertice * const vertices, int count)
@@ -93,6 +99,73 @@ void                        jo_3d_create_plane(jo_3d_quad * const quad, jo_verti
     quad->data.attbl = &quad->attribute;
     quad->data.attbl->flag = Dual_Plane;
     JO_ZERO(quad->data.attbl->gstb);
+}
+
+jo_3d_mesh                  *jo_3d_create_mesh_from_vertices_and_normals(const unsigned int quad_count, jo_vertice * const vertices, jo_vector * const normals)
+{
+    unsigned int            i;
+    FIXED                   vertice_index;
+    jo_3d_mesh              *mesh;
+
+    mesh = (jo_3d_mesh *)jo_malloc_with_behaviour(sizeof(*mesh), JO_MALLOC_TRY_REUSE_SAME_BLOCK_SIZE);
+    mesh->data.nbPoint = JO_MULT_BY_4(quad_count);
+    mesh->data.pntbl = (POINT *)jo_malloc_with_behaviour(mesh->data.nbPoint * sizeof(*mesh->data.pntbl), JO_MALLOC_TRY_REUSE_SAME_BLOCK_SIZE);
+    if (vertices != JO_NULL)
+    {
+        for (JO_ZERO(i); i < mesh->data.nbPoint; ++i)
+        {
+            mesh->data.pntbl[i][0] = jo_int2fixed(vertices[i].x);
+            mesh->data.pntbl[i][1] = jo_int2fixed(vertices[i].y);
+            mesh->data.pntbl[i][2] = jo_int2fixed(vertices[i].z);
+        }
+    }
+    mesh->data.nbPolygon = quad_count;
+    mesh->data.pltbl = (POLYGON *)jo_malloc_with_behaviour(quad_count * sizeof(*mesh->data.pltbl), JO_MALLOC_TRY_REUSE_SAME_BLOCK_SIZE);
+    JO_ZERO(vertice_index);
+    for (JO_ZERO(i); i < quad_count; ++i)
+    {
+        if (normals != JO_NULL)
+        {
+            mesh->data.pltbl[i].norm[0] = jo_int2fixed(normals[i].x);
+            mesh->data.pltbl[i].norm[1] = jo_int2fixed(normals[i].y);
+            mesh->data.pltbl[i].norm[2] = jo_int2fixed(normals[i].z);
+        }
+        else
+        {
+            mesh->data.pltbl[i].norm[0] = JO_FIXED_0;
+            mesh->data.pltbl[i].norm[1] = JO_FIXED_1;
+            mesh->data.pltbl[i].norm[2] = JO_FIXED_0;
+        }
+        mesh->data.pltbl[i].Vertices[0] = vertice_index;
+        ++vertice_index;
+        mesh->data.pltbl[i].Vertices[1] = vertice_index;
+        ++vertice_index;
+        mesh->data.pltbl[i].Vertices[2] = vertice_index;
+        ++vertice_index;
+        mesh->data.pltbl[i].Vertices[3] = vertice_index;
+        ++vertice_index;
+    }
+    mesh->data.attbl = (ATTR *)jo_malloc_with_behaviour(quad_count * sizeof(*mesh->data.attbl), JO_MALLOC_TRY_REUSE_SAME_BLOCK_SIZE);
+    for (JO_ZERO(i); i < quad_count; ++i)
+    {
+        mesh->data.attbl[i].flag = Dual_Plane;
+        JO_ZERO(mesh->data.attbl[i].gstb);
+    }
+    return (mesh);
+}
+
+void                        jo_3d_free_mesh(const jo_3d_mesh * const mesh)
+{
+#ifdef JO_DEBUG
+    if (mesh == JO_NULL)
+    {
+        jo_core_error("mesh is null");
+        return ;
+    }
+#endif
+    jo_free(mesh->data.pntbl);
+    jo_free(mesh->data.pltbl);
+    jo_free(mesh->data.attbl);
 }
 
 void                        jo_3d_create_cube(jo_3d_quad * const array, jo_vertice * const vertices)
@@ -159,6 +232,41 @@ void                        jo_3d_set_mesh_polygon_screen_doors(jo_3d_mesh * con
         JO_ADD_FLAG(mesh->data.attbl[index].atrb, MESHon);
     else
         JO_REMOVE_FLAG(mesh->data.attbl[index].atrb, MESHon);
+}
+
+void                        jo_3d_set_mesh_polygon_high_speed_shrink(jo_3d_mesh * const mesh, const bool enabled, const unsigned int index)
+{
+#ifdef JO_DEBUG
+    if (mesh == JO_NULL)
+    {
+        jo_core_error("mesh is null");
+        return ;
+    }
+    if (index >= mesh->data.nbPolygon)
+    {
+        jo_core_error("index (%d) is too high (max=%d)", (int)index, (int)mesh->data.nbPolygon);
+        return ;
+    }
+#endif
+    if (enabled)
+        JO_ADD_FLAG(mesh->data.attbl[index].atrb, HSSon);
+    else
+        JO_REMOVE_FLAG(mesh->data.attbl[index].atrb, HSSon);
+}
+
+void                        jo_3d_set_mesh_high_speed_shrink(jo_3d_mesh * const mesh, const bool enabled)
+{
+    unsigned int            i;
+
+#ifdef JO_DEBUG
+    if (mesh == JO_NULL)
+    {
+        jo_core_error("mesh is null");
+        return ;
+    }
+#endif
+    for (JO_ZERO(i); i < mesh->data.nbPolygon; ++i)
+        jo_3d_set_mesh_polygon_high_speed_shrink(mesh, enabled, i);
 }
 
 void                        jo_3d_set_mesh_screen_doors(jo_3d_mesh * const mesh, const bool enabled)
@@ -234,10 +342,19 @@ void                        jo_3d_set_mesh_polygon_texture(jo_3d_mesh * const me
     if (use_light)
         JO_ADD_FLAG(mesh->data.attbl[index].sort, UseLight);
     mesh->data.attbl[index].texno = sprite_id;
-    mesh->data.attbl[index].atrb = (CL32KRGB | No_Gouraud) | (((sprNoflip) >> 24) & 0xc0);
+    if (__jo_sprite_pic[sprite_id].color_mode == COL_256)
+    {
+        mesh->data.attbl[index].colno = (unsigned short)__jo_sprite_attributes.color_table_index;
+        mesh->data.attbl[index].atrb = (CL256Bnk | No_Gouraud) | (((sprNoflip) >> 24) & 0xc0);
+        JO_ADD_FLAG(mesh->data.attbl[index].sort, UsePalette);
+    }
+    else
+    {
+        mesh->data.attbl[index].colno = No_Palet;
+        mesh->data.attbl[index].atrb = (CL32KRGB | No_Gouraud) | (((sprNoflip) >> 24) & 0xc0);
+    }
     if (use_screen_doors)
         JO_ADD_FLAG(mesh->data.attbl[index].atrb, MESHon);
-    mesh->data.attbl[index].colno = No_Palet;
     mesh->data.attbl[index].dir = (sprNoflip) & 0x3f;
 }
 
@@ -256,7 +373,21 @@ void                        jo_3d_set_mesh_texture(jo_3d_mesh * const mesh, cons
         jo_3d_set_mesh_polygon_texture(mesh, sprite_id, i);
 }
 
-void                        jo_3d_set_mesh_polygon_color(jo_3d_mesh * const mesh, const jo_color color, const unsigned int index)
+void                        jo_3d_set_mesh_polygon_wireframe(jo_3d_mesh * const mesh, const unsigned int index, bool wireframe)
+{
+#ifdef JO_DEBUG
+    if (mesh == JO_NULL)
+    {
+        jo_core_error("mesh is null");
+        return ;
+    }
+#endif
+    mesh->data.attbl[index].sort = (SORT_CEN) | (((wireframe ? sprPolyLine : sprPolygon) >> 16) & 0x1c) | (No_Option);
+    mesh->data.attbl[index].atrb = (CL32KRGB | No_Gouraud) | (((wireframe ? sprPolyLine : sprPolygon) >> 24) & 0xc0);
+    mesh->data.attbl[index].dir = (wireframe ? sprPolyLine : sprPolygon) & 0x3f;
+}
+
+void                        jo_3d_set_mesh_polygon_color_ex(jo_3d_mesh * const mesh, const jo_color color, const unsigned int index, bool wireframe)
 {
     bool                    use_light;
     bool                    use_screen_doors;
@@ -275,15 +406,15 @@ void                        jo_3d_set_mesh_polygon_color(jo_3d_mesh * const mesh
 #endif
     use_light = (mesh->data.attbl[index].sort & UseLight) != 0;
     use_screen_doors = (mesh->data.attbl[index].atrb & MESHon) != 0;
-    mesh->data.attbl[index].sort = (SORT_CEN) | (((sprPolygon) >> 16) & 0x1c) | (No_Option);
+    mesh->data.attbl[index].sort = (SORT_CEN) | (((wireframe ? sprPolyLine : sprPolygon) >> 16) & 0x1c) | (No_Option);
     if (use_light)
         JO_ADD_FLAG(mesh->data.attbl[index].sort, UseLight);
     mesh->data.attbl[index].texno = No_Texture;
-    mesh->data.attbl[index].atrb = (CL32KRGB | No_Gouraud) | (((sprPolygon) >> 24) & 0xc0);
+    mesh->data.attbl[index].atrb = (CL32KRGB | No_Gouraud) | (((wireframe ? sprPolyLine : sprPolygon) >> 24) & 0xc0);
     if (use_screen_doors)
         JO_ADD_FLAG(mesh->data.attbl[index].atrb, MESHon);
     mesh->data.attbl[index].colno = color;
-    mesh->data.attbl[index].dir = (sprPolygon) & 0x3f;
+    mesh->data.attbl[index].dir = (wireframe ? sprPolyLine : sprPolygon) & 0x3f;
 }
 
 void                        jo_3d_set_mesh_color(jo_3d_mesh * const mesh, const jo_color color)

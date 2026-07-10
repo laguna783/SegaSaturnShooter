@@ -1,6 +1,6 @@
 /*
 ** Jo Sega Saturn Engine
-** Copyright (c) 2012-2020, Johannes Fetz (johannesfetz@gmail.com)
+** Copyright (c) 2012-2025, Johannes Fetz (johannesfetz@gmail.com)
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -47,7 +47,7 @@ void    __jo_core_error(char *message, const char *function);
 #endif
 
 /** @brief Jo Engine Version */
-# define JO_ENGINE_VERSION  (10.0)
+# define JO_ENGINE_VERSION  (2025.1)
 
 /*
 ** TYPEDEFS
@@ -162,6 +162,25 @@ static  __jo_force_inline void      jo_core_tv_off(void)
 static  __jo_force_inline void      jo_core_tv_on(void)
 {
     slTVOn();
+}
+
+/** @brief Exit program and return to the Saturn multiplayer (CD player) screen
+ *  @warning Works but I didn't found documentation about it
+ *  @todo Investigate and give feedback to https://segaxtreme.net/threads/best-way-to-debug-saturn-bios.18644/
+ */
+static  __jo_force_inline void jo_core_exit_to_multiplayer(void)
+{
+
+    (**(void(**)(void))0x600026C)();
+}
+
+/** @brief Restart the Saturn
+ *  @warning Doesn't work in Yabause
+ */
+static  __jo_force_inline void jo_core_restart_saturn(void)
+{
+    jo_smpc_begin_command();
+    jo_smpc_end_command(SystemReset);
 }
 
 /** @brief Set scroll screen order between them
