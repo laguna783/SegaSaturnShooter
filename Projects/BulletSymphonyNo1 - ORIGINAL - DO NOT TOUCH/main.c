@@ -9,37 +9,6 @@
 #include "ship.h"
 #include "background.h"
 
-/*
-** Sprite scale for the ship and the enemies: 75% of their source size.
-**
-** VDP1 scaling is a render-time attribute only. jo_hitbox_detection() reads the
-** sprite's *unscaled* source dimensions out of __jo_sprite_def, so scaling the
-** draw call alone would leave full-size invisible hitboxes behind. Every
-** collision box below is therefore scaled by hand with SCALED() to match what
-** the player actually sees.
-*/
-# define SPRITE_SCALE               (0.75f)
-# define SCALED(v)                  (((v) * 3) / 4)
-
-/* Collision boxes in unscaled source pixels. */
-# define ENEMY_HITBOX_W             (20)
-# define ENEMY_HITBOX_H             (24)
-# define SHIP_HITBOX_W              (28)
-# define SHIP_HITBOX_H              (20)
-
-/* Muzzle offset from the ship's centre to its nose. */
-# define SHIP_MUZZLE_OFFSET_Y       SCALED(28)
-
-/*
-** Ship spawn point. Screen coordinates are centred on (0, 0) and +Y points down,
-** so the bottom edge of the play field is +JO_TV_HEIGHT_2. Expressing the spawn
-** relative to that constant keeps it correct in every video mode.
-*/
-# define SHIP_SPRITE_HALF_HEIGHT    SCALED(19)  /* ship tile is 40x38, drawn centred */
-# define SHIP_BOTTOM_MARGIN         (16)        /* clearance below the ship */
-# define SHIP_START_X               (0)
-# define SHIP_START_Y               (JO_TV_HEIGHT_2 - SHIP_SPRITE_HALF_HEIGHT - SHIP_BOTTOM_MARGIN)
-
 static t_ship       ship;
 static int          first_ship_sprite_id;
 static int          blast_sprite_id;
@@ -70,10 +39,8 @@ static inline void         draw_ship(void)
     /* Instead of loading the same animation when we move the ship to the right, we just flip the sprite horizontally */
     if (ship.move == SHIP_MOVE_RIGHT)
         jo_sprite_enable_horizontal_flip();
-    jo_sprite_change_sprite_scale(SPRITE_SCALE);
     /* We reverse the animation when the ship doesn't move horizontally (see line 74) */
     jo_sprite_draw3D(ship.reverse_animation ? jo_get_anim_sprite_reverse(ship.anim_id) : jo_get_anim_sprite(ship.anim_id), ship.x, ship.y, 500);
-    jo_sprite_restore_sprite_scale();
     if (ship.move == SHIP_MOVE_RIGHT)
         jo_sprite_disable_horizontal_flip();
 
@@ -84,10 +51,7 @@ static inline bool         check_if_laser_hit_enemy(jo_node *enemy, void *extra)
     jo_node         *blast;
 
     blast = (jo_node *)extra;
-    /* The blast is drawn unscaled, so its own sprite dimensions are still correct. */
-    if (!jo_hitbox_detection_custom_boundaries(blast_sprite_id, blast->data.coord.x, blast->data.coord.y,
-                                               enemy->data.coord.x, enemy->data.coord.y,
-                                               SCALED(ENEMY_HITBOX_W), SCALED(ENEMY_HITBOX_H)))
+    if (!jo_hitbox_detection_custom_boundaries(blast_sprite_id, blast->data.coord.x, blast->data.coord.y, enemy->data.coord.x, enemy->data.coord.y, 20, 24))
         return false;
     jo_list_remove(&enemies_list, enemy);
     ++ship.score;
@@ -106,30 +70,14 @@ static void         draw_laser_blast(jo_node *node)
 
 static void         draw_enemy(jo_node *node)
 {
-    jo_sprite_change_sprite_scale(SPRITE_SCALE);
     jo_sprite_draw3D(enemy_sprite_id, node->data.coord.x, node->data.coord.y, 520);
-    jo_sprite_restore_sprite_scale();
     node->data.coord.y += 2;
-    /*
-    ** The shield is drawn at ship.x/y + shield_pos, so it must be tested there too.
-    ** Passing shield_pos alone tested it around the screen centre.
-    ** The shield itself is unscaled, so it leads and the enemy supplies a scaled box.
-    */
-    if (having_shield && jo_hitbox_detection_custom_boundaries(shield_sprite_id,
-                                                               ship.x + ship.shield_pos.x, ship.y + ship.shield_pos.y,
-                                                               node->data.coord.x, node->data.coord.y,
-                                                               SCALED(ENEMY_HITBOX_W), SCALED(ENEMY_HITBOX_H)))
+    if (having_shield && jo_hitbox_detection(enemy_sprite_id, node->data.coord.x, node->data.coord.y, shield_sprite_id, ship.shield_pos.x, ship.shield_pos.y))
     {
         jo_list_remove(&enemies_list, node);
         having_shield = 0;
     }
-    /* Both the enemy and the ship are scaled, so neither can supply its sprite dimensions. */
-    else if (jo_square_intersect(node->data.coord.x - JO_DIV_BY_2(SCALED(ENEMY_HITBOX_W)),
-                                 node->data.coord.y - JO_DIV_BY_2(SCALED(ENEMY_HITBOX_H)),
-                                 SCALED(ENEMY_HITBOX_W), SCALED(ENEMY_HITBOX_H),
-                                 ship.x - JO_DIV_BY_2(SCALED(SHIP_HITBOX_W)),
-                                 ship.y - JO_DIV_BY_2(SCALED(SHIP_HITBOX_H)),
-                                 SCALED(SHIP_HITBOX_W), SCALED(SHIP_HITBOX_H)))
+    else if (jo_hitbox_detection_custom_boundaries(enemy_sprite_id, node->data.coord.x, node->data.coord.y, ship.x, ship.y, 28, 20))
     {
         gameover = 1;
         jo_list_remove(&enemies_list, node);
@@ -180,15 +128,6 @@ static inline void         start_ship_animation(t_ship_horiz_move move, char is_
     ship.move = move;
 }
 
-static inline void         reset_ship_position(void)
-{
-    ship.x = SHIP_START_X;
-    ship.y = SHIP_START_Y;
-    ship.move = SHIP_MOVE_NONE;
-    ship.is_moving_horizontaly = 0;
-    ship.reverse_animation = 0;
-}
-
 void                restart_game(void)
 {
     jo_list_clear(&laser_blast_list);
@@ -197,7 +136,6 @@ void                restart_game(void)
     ship.score = 0;
     gameover = 0;
     having_shield = 1;
-    reset_ship_position();
     jo_clear_screen();
 }
 
@@ -206,7 +144,7 @@ static inline void         shoot(void)
     jo_list_data    blast;
 
     blast.coord.x = ship.x;
-    blast.coord.y = ship.y - SHIP_MUZZLE_OFFSET_Y;
+    blast.coord.y = ship.y - 28;
     jo_list_add(&laser_blast_list, blast);
 }
 
@@ -269,7 +207,7 @@ void            init_game(void)
     ship.score = 0;
     ship.shield_pos.x = 0;
     ship.shield_pos.y = 0;
-    reset_ship_position();
+    ship.move = SHIP_MOVE_NONE;
     jo_storyboard_move_object_in_circle(&ship.shield_pos, 30, 4, JO_STORYBOARD_INFINITE_DURATION);
     jo_list_init(&laser_blast_list);
     jo_list_init(&enemies_list);
